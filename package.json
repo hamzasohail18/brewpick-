@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:start": "supabase start",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "import:csv": "tsx scripts/import-csv.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

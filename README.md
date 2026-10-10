@@ -68,6 +68,43 @@ Collectors go through `collectors/lib/runner.ts`, which:
 
 "Run now" in the admin queues a run; the worker that executes queued runs arrives with the scheduler (build step 12).
 
+## Review pipeline (staging → review → publish)
+
+Nothing collected or imported writes live tables directly. Everything goes through `src/lib/pipeline`:
+
+1. **Normalize** (`normalize.ts`): integer PKR from "Rs. 1,250/-", sizes to ml (Small 240 / Regular 350 /
+   Large 470 *only* when the source states no volume, marked `volume_is_assumed`), menu names to
+   `drink_types` via aliases, times to 24h Asia/Karachi.
+2. **Validate** (`validate.ts`). Rejected outright: missing source URL and proof image, price outside
+   Rs. 50–5,000, deal ending before it starts, estimated nutrition without assumptions. Flagged for a
+   closer look: price outside Rs. 100–3,000, calories implausible for the cup size/milk, assumed volume,
+   unknown drink type, deal expired or ending within 48 h, discount over 50%, coordinates outside Lahore.
+   Rejected rows are kept (status `rejected`) so you can see what a source got wrong.
+3. **Diff** (`diff.ts`, `match.ts`): finds the live row (place+item+size+channel for prices, OSM/Google
+   id or name+location for places, …). No live row = *new*; identical = *re-confirm*, auto-approved and
+   only bumps `last_verified_at`; otherwise *change*, with a per-field diff and a flag for price
+   changes over 15%. A blank value in the source is treated as "not stated", never as "clear this".
+   When a batch is marked as a complete menu, live items missing from it are staged as *removals*.
+   A newer proposal for the same thing replaces one still pending.
+4. **Review** (`/admin/review`): evidence beside live and proposed values; Approve, Edit (re-validated)
+   or Reject (reason required). Approving moves on to the next pending item.
+5. **Publish** (`publish.ts`), in one transaction: creates the menu item/size if needed, marks the old
+   price `is_current = false` with `superseded_at`, inserts the new price with full provenance and
+   `last_verified_at = now()`, and writes `audit_log`.
+
+## Adding real data from a spreadsheet
+
+`/admin/import` takes a CSV of **prices** or **places** (templates linked on the page, also in
+`public/templates/`). Rows land in the review queue like any other source. For a hosted database you
+can also run:
+
+```bash
+npm run import:csv -- --type prices --source manual-admin prices.csv
+```
+
+(The script needs `DATABASE_URL`; with the embedded dev database use the admin page, since two processes
+must not open the same PGlite folder.)
+
 ## Database notes
 
 - Money is integer PKR, volumes are ml, times are `timestamptz` shown in Asia/Karachi.

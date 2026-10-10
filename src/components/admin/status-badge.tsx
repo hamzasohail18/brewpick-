@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { AUTOMATION_LABELS, REVIEW_LABELS, RUN_LABELS } from "@/lib/domain/labels";
+import { AUTOMATION_LABELS, FLAG_LABELS, REVIEW_LABELS, RUN_LABELS } from "@/lib/domain/labels";
 import type { AutomationStatus, ReviewState, RunStatus } from "@/lib/domain/sources";
 
 type Tone = "ok" | "warn" | "bad" | "neutral";
@@ -50,3 +50,8 @@ export const ReviewBadge = ({ value }: { value: ReviewState }) => (
 
 const runTone: Record<RunStatus, Tone> = { succeeded: "ok", partial: "warn", failed: "bad", queued: "neutral", running: "neutral" };
 export const RunBadge = ({ value }: { value: RunStatus }) => <StatusBadge tone={runTone[value]}>{RUN_LABELS[value]}</StatusBadge>;
+
+export function FlagBadge({ flag }: { flag: string }) {
+  const f = FLAG_LABELS[flag] ?? { label: flag.replace(/_/g, " "), tone: "neutral" as const };
+  return <StatusBadge tone={f.tone}>{f.label}</StatusBadge>;
+}

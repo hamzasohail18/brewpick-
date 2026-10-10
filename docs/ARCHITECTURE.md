@@ -52,7 +52,7 @@ brewpick-lahore/
 │  │  ├─ supabase/         browser / server / service-role clients
 │  │  ├─ domain/           types + Zod schemas shared by app, scripts and collectors
 │  │  ├─ scoring/          "Pick for me" engine
-│  │  ├─ pipeline/         validator, diff engine, publisher
+│  │  ├─ pipeline/         normalizer, validator, matcher + diff engine, stager, publisher, CSV import
 │  │  └─ i18n/             message catalogues (en, ur) and RTL helpers
 │  └─ ...
 ├─ collectors/
