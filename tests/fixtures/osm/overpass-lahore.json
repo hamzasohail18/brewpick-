@@ -1,0 +1,27 @@
+{
+  "version": 0.6,
+  "generator": "fixture (fictional cafés, not real OSM data)",
+  "elements": [
+    {
+      "type": "node", "id": 1001, "lat": 31.5125, "lon": 74.3455,
+      "tags": {
+        "amenity": "cafe", "name": "Fixture Bean Lab", "cuisine": "coffee_shop",
+        "addr:street": "Main Boulevard", "addr:housenumber": "12", "addr:city": "Lahore",
+        "opening_hours": "Mo-Th 09:00-23:00; Fr 14:00-01:00; Sa,Su 10:00-24:00",
+        "internet_access": "wlan", "diet:halal": "yes", "website": "fixture-bean-lab.example.com",
+        "contact:instagram": "https://www.instagram.com/fixturebeanlab/"
+      }
+    },
+    {
+      "type": "way", "id": 2002, "center": { "lat": 31.4701, "lon": 74.2730 },
+      "tags": { "amenity": "cafe", "name": "Fixture Chain Coffee", "branch": "Johar Town", "brand": "Fixture Chain Coffee", "opening_hours": "24/7" }
+    },
+    {
+      "type": "node", "id": 3003, "lat": 31.3672, "lon": 74.1834,
+      "tags": { "amenity": "fast_food", "cuisine": "coffee", "name": "Fixture Drive Cup", "drive_through": "yes", "opening_hours": "PH off; Mo-Su 08:00-22:00" }
+    },
+    { "type": "node", "id": 4004, "lat": 31.52, "lon": 74.35, "tags": { "amenity": "cafe" } },
+    { "type": "node", "id": 5005, "lat": 33.69, "lon": 73.06, "tags": { "amenity": "cafe", "name": "Fixture Islamabad Cafe" } },
+    { "type": "node", "id": 6006, "lat": 31.55, "lon": 74.33, "tags": { "disused:amenity": "cafe", "name": "Fixture Closed Cafe" } }
+  ]
+}

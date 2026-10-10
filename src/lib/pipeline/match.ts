@@ -3,7 +3,7 @@
 import type { Db } from "@/lib/db/core";
 import type { Flat } from "./diff";
 import { normName } from "./normalize";
-import type { BeanRecord, DealRecord, NutritionRecord, PlaceRecord, PriceRecord, StagedRecord } from "./records";
+import { hoursKeys, type BeanRecord, type DealRecord, type NutritionRecord, type PlaceRecord, type PriceRecord, type StagedRecord } from "./records";
 
 export interface Match {
   matchKey: string;
@@ -98,7 +98,16 @@ async function matchPlace(tx: Db, r: PlaceRecord): Promise<Match> {
     row = near.find((p) => normName(String(p.name)) === normName(r.name))!;
   }
   if (!row) return { matchKey, targetId: null, current: null };
-  return { matchKey, targetId: row.id, current: { ...row, lat: Number(row.lat), lng: Number(row.lng) } };
+  const hours = await tx.query<{ day_of_week: number; opens: string | null; closes: string | null; is_closed: boolean }>(
+    `select day_of_week, to_char(opens_at, 'HH24:MI') as opens, to_char(closes_at, 'HH24:MI') as closes, is_closed
+       from place_hours where place_id = $1`,
+    [row.id],
+  );
+  return {
+    matchKey,
+    targetId: row.id,
+    current: { ...row, lat: Number(row.lat), lng: Number(row.lng), hours: hours.length ? hoursKeys(hours) : null },
+  };
 }
 
 /** Resolve place + item display name + size label to an item_sizes row. */

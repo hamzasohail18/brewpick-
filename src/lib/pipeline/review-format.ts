@@ -62,7 +62,23 @@ export const SELECT_OPTIONS: Record<string, string[]> = {
   roast: ["light", "medium_light", "medium", "medium_dark", "dark"],
 };
 /** Identity/bookkeeping fields a reviewer shouldn't change from the queue. */
-const LOCKED = new Set(["kind", "place_id", "brand_id", "captured_at", "osm_id", "google_place_id"]);
+const LOCKED = new Set(["kind", "place_id", "brand_id", "captured_at", "osm_id", "google_place_id", "hours"]);
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** "Mon 08:00–22:00 · Tue closed …" (also accepts the "1:08:00-22:00" key form used in diffs). */
+export function formatHours(v: unknown): string {
+  if (!Array.isArray(v) || v.length === 0) return "";
+  return v
+    .map((h) => {
+      if (typeof h === "string") {
+        const [d, rest] = [h.slice(0, h.indexOf(":")), h.slice(h.indexOf(":") + 1)];
+        return `${DAY_NAMES[Number(d)]} ${rest === "closed" ? "closed" : rest.replace("-", "–")}`;
+      }
+      const e = h as { day_of_week: number; opens: string; closes: string; is_closed: boolean };
+      return `${DAY_NAMES[e.day_of_week]} ${e.is_closed ? "closed" : `${e.opens}–${e.closes}`}`;
+    })
+    .join(" · ");
+}
 
 export interface EditableField {
   path: string; // "price_pkr", "item.display_name"
@@ -102,7 +118,15 @@ export function toEditableFields(record: Json, prefix = ""): EditableField[] {
     }
     const type = fieldType(path);
     const value =
-      v === null || v === undefined ? "" : Array.isArray(v) ? v.join(", ") : type === "boolean" ? (v ? "yes" : "no") : String(v);
+      v === null || v === undefined
+        ? ""
+        : k === "hours"
+          ? formatHours(v)
+          : Array.isArray(v)
+            ? v.join(", ")
+            : type === "boolean"
+              ? (v ? "yes" : "no")
+              : String(v);
     out.push({ path, label: humanize(path), type, value, options: SELECT_OPTIONS[leaf(path)], locked: LOCKED.has(k) });
   }
   return out;
@@ -143,11 +167,11 @@ export function fromEditableFields(original: Json, submitted: Record<string, str
 export function comparisonRows(kind: RecordKind, proposed: Json, current: Json | null, diff: FieldDiff | null) {
   const flat = Object.fromEntries(toEditableFields(proposed).map((f) => [leaf(f.path), f.value]));
   const compared = DIFF_FIELDS[kind] ?? [];
-  const fmt = (v: unknown) =>
-    v === null || v === undefined || v === "" ? "—" : Array.isArray(v) ? v.join(", ") || "—" : typeof v === "boolean" ? (v ? "yes" : "no") : String(v);
+  const fmt = (v: unknown, f?: string) =>
+    f === "hours" ? formatHours(v) || "—" : v === null || v === undefined || v === "" ? "—" : Array.isArray(v) ? v.join(", ") || "—" : typeof v === "boolean" ? (v ? "yes" : "no") : String(v);
   const rows = compared.map((f) => ({
     field: humanize(f),
-    live: current ? fmt(current[f]) : "—",
+    live: current ? fmt(current[f], f) : "—",
     proposed: flat[f] === undefined || flat[f] === "" ? "—" : flat[f],
     changed: Boolean(diff && f in diff),
   }));

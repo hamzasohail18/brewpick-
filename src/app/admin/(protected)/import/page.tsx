@@ -3,11 +3,17 @@ import { dbAs } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/session";
 import { CSV_TYPES } from "@/lib/pipeline/csv-import";
 import { ImportForm } from "./import-form";
+import { PurgeSample } from "./purge-sample";
 
 export const metadata: Metadata = { title: "Import · BrewPick admin" };
 
 export default async function ImportPage() {
   const admin = await requireAdmin("/admin/import");
+  const [sample] = await dbAs(admin, (tx) =>
+    tx.query<{ places: number; deals: number }>(
+      "select (select count(*)::int from places where is_sample) as places, (select count(*)::int from deals where is_sample) as deals",
+    ),
+  );
   // Only human-entry sources make sense for a spreadsheet someone typed up.
   const sources = await dbAs(admin, (tx) =>
     tx.query<{ slug: string; name: string }>(
@@ -49,6 +55,17 @@ export default async function ImportPage() {
           &ldquo;350ml&rdquo;; yes/no columns accept yes, no or blank (unknown).
         </p>
       </section>
+      {sample.places + sample.deals > 0 && (
+        <section aria-labelledby="sample" className="space-y-3 rounded-lg border border-destructive/40 p-4">
+          <h2 id="sample" className="text-base font-semibold">
+            Sample data
+          </h2>
+          <PurgeSample places={sample.places} deals={sample.deals} />
+          <p className="text-xs text-muted-foreground">
+            Same as <code>npm run sample:purge</code>. To get it back locally, delete <code>.data/pglite</code> with the dev server stopped.
+          </p>
+        </section>
+      )}
     </div>
   );
 }

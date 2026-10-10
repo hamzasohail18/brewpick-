@@ -1,7 +1,7 @@
 // Diff engine (Section 7.3 step 4): compares a proposed record with the live row it would replace.
 // Pure; the live row is looked up by match.ts and projected into the same flat shape as project().
 
-import type { RecordKind, StagedRecord } from "./records";
+import { hoursKeys, type RecordKind, type StagedRecord } from "./records";
 
 export const PRICE_CHANGE_FLAG_RATIO = 0.15;
 
@@ -26,6 +26,7 @@ export const DIFF_FIELDS: Record<RecordKind, string[]> = {
     "has_wifi",
     "has_family_seating",
     "has_drive_thru",
+    "hours",
   ],
   nutrition: ["calories_kcal", "sugar_g", "caffeine_mg", "fat_g", "protein_g"],
   deal: [
@@ -56,6 +57,7 @@ export function project(r: StagedRecord): Flat {
       volume_ml: r.size.volume_is_assumed ? null : r.size.volume_ml,
     };
   }
+  if (r.kind === "place") return { ...r, hours: r.hours ? hoursKeys(r.hours) : null };
   return { ...r };
 }
 

@@ -126,7 +126,8 @@ async function applyPlace(tx: Db, who: Reviewer, r: PlaceRecord, targetId: strin
               last_verified_at = now() where id = $1`,
       [targetId, ...fields.map((f) => r[f]), r.confidence],
     );
-    await audit(tx, who, "places", targetId, "update", old, Object.fromEntries(fields.map((f) => [f, r[f]])), sourceId);
+    await writeHours(tx, targetId, r);
+    await audit(tx, who, "places", targetId, "update", old, { ...Object.fromEntries(fields.map((f) => [f, r[f]])), hours: r.hours }, sourceId);
     return targetId;
   }
   const slug = await uniquePlaceSlug(tx, r.branch_name ? `${r.name} ${r.branch_name}` : r.name);
@@ -136,8 +137,20 @@ async function applyPlace(tx: Db, who: Reviewer, r: PlaceRecord, targetId: strin
      returning id`,
     [slug, ...PLACE_FIELDS.map((f) => r[f]), sourceId, r.confidence],
   );
+  await writeHours(tx, id, r);
   await audit(tx, who, "places", id, "insert", null, r, sourceId);
   return id;
+}
+
+async function writeHours(tx: Db, placeId: string, r: PlaceRecord) {
+  if (!r.hours) return; // source silent about hours: keep what we have
+  await tx.query("delete from place_hours where place_id = $1", [placeId]);
+  for (const h of r.hours) {
+    await tx.query(
+      "insert into place_hours (place_id, day_of_week, opens_at, closes_at, is_closed) values ($1, $2, $3, $4, $5)",
+      [placeId, h.day_of_week, h.is_closed ? null : h.opens, h.is_closed ? null : h.closes, h.is_closed],
+    );
+  }
 }
 
 async function uniquePlaceSlug(tx: Db, name: string) {

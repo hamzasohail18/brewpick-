@@ -22,7 +22,10 @@ function sqlFiles(dir: string) {
  * Idempotent. Migrations run once each (tracked by filename). Seeds are idempotent by design and
  * re-run whenever their content changes.
  */
-export async function migratePglite(pg: PGlite, opts: { seed?: boolean; root?: string } = {}) {
+export async function migratePglite(
+  pg: PGlite,
+  opts: { seed?: boolean; root?: string; /** Seed files to apply (default: all). */ seedFilter?: (file: string) => boolean } = {},
+) {
   const root = opts.root ?? SUPABASE_DIR;
   await pg.exec(`
     create schema if not exists app_meta;
@@ -43,7 +46,7 @@ export async function migratePglite(pg: PGlite, opts: { seed?: boolean; root?: s
   }
 
   if (opts.seed === false) return;
-  for (const s of sqlFiles(join(root, "seeds"))) {
+  for (const s of sqlFiles(join(root, "seeds")).filter((f) => opts.seedFilter?.(f.name) ?? true)) {
     if (applied.get(`seeds/${s.name}`) === s.hash) continue;
     await pg.transaction(async (tx) => {
       await tx.exec(s.sql);

@@ -201,6 +201,7 @@ describe("diff engine", () => {
       has_wifi: true,
       has_family_seating: null,
       has_drive_thru: null,
+      hours: null,
       source_url: "https://www.openstreetmap.org/node/1",
       proof_image_url: null,
       confidence: "community_reported" as const,

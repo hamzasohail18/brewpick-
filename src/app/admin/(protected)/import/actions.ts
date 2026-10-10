@@ -31,3 +31,13 @@ export async function importAction(_prev: ImportState, formData: FormData): Prom
   revalidatePath("/admin", "layout");
   return { result, fileName: file.name };
 }
+
+export type PurgeState = { error?: string; removed?: Record<string, number> };
+
+export async function purgeSampleAction(_prev: PurgeState, formData: FormData): Promise<PurgeState> {
+  const admin = await requireAdmin("/admin/import");
+  if (formData.get("confirm") !== "on") return { error: "Tick the box to confirm." };
+  const [row] = await dbAs(admin, (tx) => tx.query<{ result: Record<string, number> }>("select purge_sample_data() as result"));
+  revalidatePath("/", "layout");
+  return { removed: row.result };
+}

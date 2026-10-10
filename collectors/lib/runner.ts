@@ -6,6 +6,13 @@ import { SERVICE, withActor, type Db } from "@/lib/db/core";
 import { assertCollectable, type CollectorPolicy } from "@/lib/domain/source-guard";
 import type { SourceRow } from "@/lib/domain/sources";
 import { createPoliteFetch, ServerBlockedError, type PoliteFetch, type PoliteFetchDeps } from "./polite-fetch";
+import { localSnapshotStore, type SnapshotStore } from "./snapshots";
+
+/**
+ * APIs and open datasets are governed by their usage policy / licence (recorded in the registry
+ * review), not robots.txt, which is aimed at crawlers. Websites and files always obey robots.txt.
+ */
+const API_KINDS = new Set(["open_data_api", "official_api", "reference_dataset", "social_official_api"]);
 
 export interface CollectorContext {
   db: Db;
@@ -13,6 +20,7 @@ export interface CollectorContext {
   policy: CollectorPolicy;
   runId: string;
   fetch: PoliteFetch;
+  snapshots: SnapshotStore;
   log: (msg: string) => void;
 }
 
@@ -30,6 +38,7 @@ export interface RunOptions {
   collect: (ctx: CollectorContext) => Promise<CollectorResult>;
   contactEmail?: string | null;
   fetchDeps?: PoliteFetchDeps;
+  snapshots?: SnapshotStore;
   log?: (msg: string) => void;
   now?: Date;
 }
@@ -73,7 +82,8 @@ export async function runCollector(opts: RunOptions) {
       source,
       policy,
       runId,
-      fetch: createPoliteFetch(policy, opts.fetchDeps),
+      fetch: createPoliteFetch(policy, { respectRobots: !API_KINDS.has(source.kind), ...opts.fetchDeps }),
+      snapshots: opts.snapshots ?? localSnapshotStore(),
       log,
     });
     const status = result.partial ? "partial" : "succeeded";

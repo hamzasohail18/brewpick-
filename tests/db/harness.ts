@@ -1,10 +1,13 @@
 import { PGlite } from "@electric-sql/pglite";
 import { migratePglite } from "@/lib/db/migrate";
 
-/** Fresh in-memory Postgres with the Supabase shim, all migrations and (optionally) seeds applied. */
-export async function freshDb({ seed = true } = {}): Promise<PGlite> {
+/**
+ * Fresh in-memory Postgres with the Supabase shim, all migrations and (optionally) seeds applied.
+ * The fictional sample data is left out unless asked for, so tests control their own fixtures.
+ */
+export async function freshDb({ seed = true, sample = false } = {}): Promise<PGlite> {
   const db = new PGlite();
-  await migratePglite(db, { seed });
+  await migratePglite(db, { seed, seedFilter: (f) => sample || !f.includes("sample") });
   return db;
 }
 

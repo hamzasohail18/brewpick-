@@ -16,6 +16,18 @@ const provenance = {
   captured_at: z.iso.datetime({ offset: true }),
 };
 
+export const HoursEntry = z.object({
+  day_of_week: z.number().int().min(0).max(6), // 0 = Sunday
+  opens: time.nullable(),
+  closes: time.nullable(),
+  is_closed: z.boolean(),
+});
+export type HoursEntry = z.infer<typeof HoursEntry>;
+
+/** "1:08:00-22:00" / "0:closed": a comparable, order-independent form of a week's hours. */
+export const hoursKeys = (hours: HoursEntry[]) =>
+  [...hours].sort((a, b) => a.day_of_week - b.day_of_week).map((h) => `${h.day_of_week}:${h.is_closed ? "closed" : `${h.opens}-${h.closes}`}`);
+
 export const PriceRecord = z.object({
   kind: z.literal("item_price"),
   place_id: z.uuid(),
@@ -54,6 +66,8 @@ export const PlaceRecord = z.object({
   has_wifi: z.boolean().nullable().default(null),
   has_family_seating: z.boolean().nullable().default(null),
   has_drive_thru: z.boolean().nullable().default(null),
+  /** Weekly hours; null = the source doesn't say. One range per day (Asia/Karachi, may close after midnight). */
+  hours: z.array(HoursEntry).nullable().default(null),
   ...provenance,
 });
 

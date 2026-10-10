@@ -6,4 +6,4 @@ major_version = 15
 
 [db.seed]
 enabled = true
-sql_paths = ["./seeds/01_reference.sql", "./seeds/02_sources.sql"]
+sql_paths = ["./seeds/01_reference.sql", "./seeds/02_sources.sql", "./seeds/03_sample_data.sql"]

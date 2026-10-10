@@ -41,6 +41,7 @@ npm run typecheck
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | browser + server | Public key; RLS limits it to published data and the user's own rows |
 | `SUPABASE_SERVICE_ROLE_KEY` | server only | Reserved for jobs that must bypass RLS |
 | `COLLECTOR_CONTACT_EMAIL` | collectors | Contact in the User-Agent; collectors refuse to run without it |
+| `SNAPSHOT_DIR` | collectors | Where raw collector responses are kept (default `.data/snapshots`) |
 | `GOOGLE_PLACES_API_KEY`, `USDA_FDC_API_KEY` | collectors | Optional; only used once the source is reviewed |
 
 Admins are users whose Supabase `app_metadata.role` is `admin` (set from the dashboard or with the service key).
@@ -104,6 +105,28 @@ npm run import:csv -- --type prices --source manual-admin prices.csv
 
 (The script needs `DATABASE_URL`; with the embedded dev database use the admin page, since two processes
 must not open the same PGlite folder.)
+
+## Places from OpenStreetMap
+
+`collectors/osm` asks the Overpass API for cafés, coffee shops and coffee kiosks inside Lahore and
+stages them as place records: name, branch, type (chain if branded, kiosk if drive-through, otherwise
+specialty café for a reviewer to adjust), nearest area, address, phone, website, Instagram, wifi,
+halal, drive-through and opening hours (common `opening_hours` patterns; anything unusual is left
+blank rather than guessed). Unnamed, disused and out-of-town entries are skipped. The raw response is
+saved under `.data/snapshots/<run>/` for audit.
+
+To run it, an admin first reviews the source in `/admin/sources` (Overpass usage policy + ODbL),
+and `COLLECTOR_CONTACT_EMAIL` must be set. Then use **Run now**, or `npm run collect -- osm-overpass-lahore`
+against a hosted database. New places land in the review queue; later runs re-confirm unchanged places
+automatically.
+
+## Sample data
+
+The seed includes **14 fictional places** (`supabase/seeds/03_sample_data.sql`): menus, prices, estimated
+nutrition with stated assumptions, house beans, milk options and 10 deals. Every row has `is_sample = true`,
+and the app shows a "Sample data" badge. Names and values are invented. Edit `scripts/sample-data/data.ts`
+and run `npm run sample:generate` to change it. Remove it all with `npm run sample:purge` or the button on
+`/admin/import`.
 
 ## Database notes
 
