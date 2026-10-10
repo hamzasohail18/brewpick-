@@ -118,7 +118,36 @@ export default async function SourcesPage({ searchParams }: PageProps<"/admin/so
         </div>
       </form>
 
-      <div className="overflow-x-auto rounded-lg border bg-card">
+      {/* Phones: stacked cards so every status is visible without sideways scrolling. */}
+      <ul className="space-y-3 sm:hidden" aria-label={`Sources, ${sources.length} shown`}>
+        {sources.length === 0 && (
+          <li className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">No sources match these filters.</li>
+        )}
+        {sources.map((s) => (
+          <li key={s.id} className={s.is_active ? undefined : "opacity-60"}>
+            <Link href={`/admin/sources/${s.id}`} className="block rounded-lg border bg-card p-4 active:bg-accent">
+              <div className="font-medium">{s.name}</div>
+              <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                <code>{s.slug}</code> · {KIND_LABELS[s.kind]}
+                {!s.is_active && " · inactive"}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <AutomationBadge value={s.automation} />
+                <ReviewBadge value={s.review} />
+                {s.review !== "not_applicable" &&
+                  (s.last_run_status ? <RunBadge value={s.last_run_status} /> : <StatusBadge tone="neutral">Never run</StatusBadge>)}
+              </div>
+              {s.review !== "not_applicable" && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {s.last_run_at && <>Last run {formatDateTime(s.last_run_at)} · </>}Next check {formatDate(s.next_check_at)}
+                </div>
+              )}
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-lg border bg-card sm:block">
         <Table>
           <caption className="sr-only">Sources, {sources.length} shown</caption>
           <TableHeader>
