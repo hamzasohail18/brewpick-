@@ -241,7 +241,11 @@ describe("row level security", () => {
     expect(slugs.map((r) => r.slug)).toEqual(["test-cafe"]);
   });
 
-  test("anon cannot read the source registry but can read attributions", async () => {
+  test("anon cannot read the source registry but can read attributions of sources in use", async () => {
+    const before = await asRole(db, "anon", {}, async (tx) => (await tx.query("select * from v_attributions")).rows.length);
+    expect(before).toBe(0); // nothing collected yet, so nobody to credit
+    await db.query("update places set source_id = (select id from sources where slug = 'osm-overpass-lahore') where id = $1", [PLACE]);
+
     const [sources, attributions] = await asRole(db, "anon", {}, async (tx) => [
       (await tx.query("select * from sources")).rows.length,
       (await tx.query<{ attribution_text: string }>("select * from v_attributions")).rows.map((r) => r.attribution_text),

@@ -10,7 +10,8 @@
 -- Per-cafe sources (cafe-website-<slug>, cafe-menu-file-<slug>, instagram-official-<slug>) are created
 -- per place when the place is added, not here.
 --
--- Change the contact address in user_agent before running any collector.
+-- user_agent is left null: collectors identify as "BrewPickLahore/0.1 (+mailto:$COLLECTOR_CONTACT_EMAIL)".
+-- The collector guard refuses to run until that variable is set. Override per source only if needed.
 
 insert into sources (slug, name, kind, base_url, automation, automation_notes, license,
                      attribution_required, attribution_text, rate_limit_seconds, user_agent,
@@ -22,52 +23,52 @@ insert into sources (slug, name, kind, base_url, automation, automation_notes, l
    'Respect the Overpass usage policy and rate limits. Check share-alike implications for the places table '
    '(keep OSM-derived fields identifiable via source_id).',
    'ODbL', true, '© OpenStreetMap contributors', 10,
-   'BrewPickLahore/0.1 (+mailto:data@brewpick.example)', 'community_reported', 30, null),
+   null, 'community_reported', 30, null),
 
   ('google-places-api', 'Google Places API', 'official_api',
    'https://places.googleapis.com/v1', 'unknown_review_required',
    'INTENDED: allowed_with_conditions. Official API only, within its terms, quotas and billing. Check the '
    'caching/storage limits and attribution rules, then set max_cache_days. Never scrape Google Maps pages.',
    'Google Maps Platform Terms', true, 'Place data © Google', 2,
-   'BrewPickLahore/0.1 (+mailto:data@brewpick.example)', 'community_reported', 30, null),
+   null, 'community_reported', 30, null),
 
   ('usda-fooddata-central', 'USDA FoodData Central', 'reference_dataset',
    'https://api.nal.usda.gov/fdc/v1', 'unknown_review_required',
    'INTENDED: allowed. Public API (API key required); keep attribution. Used for estimated nutrition only.',
    'Public domain (CC0)', true, 'Nutrition reference: USDA FoodData Central', 2,
-   'BrewPickLahore/0.1 (+mailto:data@brewpick.example)', 'estimated', 90, null),
+   null, 'estimated', 90, null),
 
   ('open-food-facts', 'Open Food Facts', 'reference_dataset',
    'https://world.openfoodfacts.org', 'unknown_review_required',
    'INTENDED: allowed_with_conditions. Open Database Licence with attribution and share-alike terms; confirm.',
    'ODbL', true, 'Product data © Open Food Facts contributors', 5,
-   'BrewPickLahore/0.1 (+mailto:data@brewpick.example)', 'estimated', 90, null),
+   null, 'estimated', 90, null),
 
   ('bank-offers-alfalah', 'Bank Alfalah offers', 'bank_offer_page', 'https://www.bankalfalah.com',
    'unknown_review_required',
    'INTENDED: unknown_review_required. Confirm ToS and find the current offers page URL. If automation is not '
    'allowed, use manual entry with the offer page URL as source_url.',
-   null, false, null, 5, 'BrewPickLahore/0.1 (+mailto:data@brewpick.example)', 'community_reported', 1, null),
+   null, false, null, 5, null, 'community_reported', 1, null),
 
   ('bank-offers-hbl', 'HBL offers', 'bank_offer_page', 'https://www.hbl.com',
    'unknown_review_required', 'INTENDED: unknown_review_required. Same as bank-offers-alfalah.',
-   null, false, null, 5, 'BrewPickLahore/0.1 (+mailto:data@brewpick.example)', 'community_reported', 1, null),
+   null, false, null, 5, null, 'community_reported', 1, null),
 
   ('bank-offers-ubl', 'UBL offers', 'bank_offer_page', 'https://www.ubldigital.com',
    'unknown_review_required', 'INTENDED: unknown_review_required. Same as bank-offers-alfalah.',
-   null, false, null, 5, 'BrewPickLahore/0.1 (+mailto:data@brewpick.example)', 'community_reported', 1, null),
+   null, false, null, 5, null, 'community_reported', 1, null),
 
   ('bank-offers-meezan', 'Meezan Bank offers', 'bank_offer_page', 'https://www.meezanbank.com',
    'unknown_review_required', 'INTENDED: unknown_review_required. Same as bank-offers-alfalah.',
-   null, false, null, 5, 'BrewPickLahore/0.1 (+mailto:data@brewpick.example)', 'community_reported', 1, null),
+   null, false, null, 5, null, 'community_reported', 1, null),
 
   ('bank-offers-standard-chartered', 'Standard Chartered PK offers', 'bank_offer_page', 'https://www.sc.com/pk',
    'unknown_review_required', 'INTENDED: unknown_review_required. Same as bank-offers-alfalah.',
-   null, false, null, 5, 'BrewPickLahore/0.1 (+mailto:data@brewpick.example)', 'community_reported', 1, null),
+   null, false, null, 5, null, 'community_reported', 1, null),
 
   ('bank-offers-faysal', 'Faysal Bank offers', 'bank_offer_page', 'https://www.faysalbank.com',
    'unknown_review_required', 'INTENDED: unknown_review_required. Same as bank-offers-alfalah.',
-   null, false, null, 5, 'BrewPickLahore/0.1 (+mailto:data@brewpick.example)', 'community_reported', 1, null),
+   null, false, null, 5, null, 'community_reported', 1, null),
 
   ('instagram-manual', 'Instagram (manual entry)', 'social_manual', 'https://www.instagram.com',
    'allowed', 'Manual entry only; save a screenshot as proof_image_url. NO automated scraping.',

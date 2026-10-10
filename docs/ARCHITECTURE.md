@@ -22,6 +22,8 @@ sources ─▶│ guard ─▶ fetch/OCR ─▶ normalize ─▶ validate │─
 | Decision | Why |
 |---|---|
 | Supabase Postgres, plain SQL migrations | RLS, auth and cron in one place; SQL keeps `effective_price` close to the data |
+| Server queries in SQL, run as the request's role | One data path for Supabase and local PGlite; RLS still decides visibility |
+| Collector guard in two layers | TS guard gives readable reasons; a `source_runs` trigger makes it impossible to bypass |
 | PGlite for DB tests | Migrations, RLS and functions are tested in-process without Docker |
 | Scoring engine in TypeScript, prices in SQL | Effective price must be identical everywhere (SQL); scoring weights change often and need fast unit tests (TS) |
 | Nothing scraped writes to live tables | All automated/community data goes through `staging_records` or `submissions` and human review |
@@ -44,13 +46,18 @@ brewpick-lahore/
 │  │  └─ api/              server routes (submissions, publisher, run-now)
 │  ├─ components/          UI (shadcn/ui in components/ui)
 │  ├─ lib/
+│  │  ├─ db/               SQL access (Postgres or PGlite), actor/role scoping, PGlite migrator
+│  │  ├─ auth/             session -> actor (Supabase Auth, or dev-only sign-in)
+│  │  ├─ admin/            admin data access (source registry, ...)
 │  │  ├─ supabase/         browser / server / service-role clients
 │  │  ├─ domain/           types + Zod schemas shared by app, scripts and collectors
 │  │  ├─ scoring/          "Pick for me" engine
 │  │  ├─ pipeline/         validator, diff engine, publisher
 │  │  └─ i18n/             message catalogues (en, ur) and RTL helpers
 │  └─ ...
-├─ collectors/             osm, google-places, website (JSON-LD/HTML), ocr, bank-offers, guard
+├─ collectors/
+│  ├─ lib/                 runner (guard + run log), polite fetch, robots.txt
+│  └─ ...                  osm, google-places, website (JSON-LD/HTML), ocr, bank-offers
 ├─ scripts/                normalize, validate, CSV import/export, purge-sample-data
 ├─ tests/                  db (PGlite), fixtures (HTML/images), e2e (Playwright)
 └─ docs/
