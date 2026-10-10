@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BrewPick Lahore
 
-## Getting Started
+Mobile-first PWA that helps people in Lahore decide where to get their next coffee in under 30 seconds:
+effective price after the deals *you* can use, distance, and calories, from data with visible sources.
 
-First, run the development server:
+> Prices and deals may change; confirm with the cafe.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design and folder layout.
+
+## Setup
+
+Requirements: Node 20+, and for a local database either the Supabase CLI + Docker, or a hosted Supabase project.
 
 ```bash
+npm install
+cp .env.example .env.local     # fill in Supabase URL + keys
+npm run db:start               # local Supabase (Docker)
+npm run db:reset               # applies supabase/migrations + supabase/seeds
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Tests don't need Docker; the database suite runs the real migrations in PGlite:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm test
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment variables
 
-## Learn More
+| Name | Where | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | browser + server | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | browser + server | Public key; RLS limits it to published data and the user's own rows |
+| `SUPABASE_SERVICE_ROLE_KEY` | server only | Admin routes, publisher, collectors |
+| `COLLECTOR_CONTACT_EMAIL` | collectors | Contact in the User-Agent |
+| `GOOGLE_PLACES_API_KEY`, `USDA_FDC_API_KEY` | collectors | Optional; only used once the source is reviewed |
 
-To learn more about Next.js, take a look at the following resources:
+Admins are users whose Supabase `app_metadata.role` is `admin` (set from the dashboard or with the service key).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Database notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Money is integer PKR, volumes are ml, times are `timestamptz` shown in Asia/Karachi.
+- `effective_price(item_size_id, payment_method_ids int[] | user_id uuid, at_time, channel)` returns the
+  lowest price after the single best valid deal. `effective_price_detail(...)` also returns which deal.
+  - Deals don't stack; the biggest single discount wins.
+  - Min spend is checked against one cup (the app's unit of comparison).
+  - BOGO counts as 50% off per cup; `free_item` gives nothing off the cup itself.
+  - `deal_conditions` keys `dine_in_only`, `takeaway_only`, `delivery_only` are enforced; other keys are shown as terms.
+- Records not verified in 30 days drop one confidence level when read (`display_confidence`).
+- Expired and unpublished deals are invisible to the public through RLS.
 
-## Deploy on Vercel
+## Data sources and legal notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+<!-- Expanded as collectors land (Section 7.8). -->
+- Every source is listed in the `sources` registry with its automation status and review date.
+  Collectors refuse to run unless a source is `allowed` or `allowed_with_conditions`, and the database
+  refuses those statuses until `automation_notes` and `robots_checked_at` are filled.
+- Third-party sources are seeded as `unknown_review_required`; the intended status is in `automation_notes`.
+- We store facts (prices, items, hours) and link to the source; we don't republish others' photos or text.
+- Verified, community-reported and estimated data are kept visually distinct in the UI.
+- Takedown / correction contact: *to be set before launch*.

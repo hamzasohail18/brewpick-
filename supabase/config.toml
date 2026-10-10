@@ -1,0 +1,9 @@
+# Minimal Supabase CLI config. `supabase start` fills in defaults for anything not listed.
+project_id = "brewpick-lahore"
+
+[db]
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seeds/01_reference.sql", "./seeds/02_sources.sql"]
