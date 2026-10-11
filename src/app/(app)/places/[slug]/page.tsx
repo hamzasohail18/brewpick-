@@ -5,6 +5,7 @@ import { cache } from "react";
 import { ArrowLeft, Camera, Clock, CreditCard, ExternalLink, Globe, AtSign, Navigation, Phone, Star, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfidenceBadge, SampleBadge } from "@/components/app/badges";
+import { CompareSizeButtons } from "@/components/app/compare-buttons";
 import { ANON, dbAs } from "@/lib/db";
 import { getT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -159,7 +160,7 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
             <ul className="space-y-3">
               {place.menu.map((item) => (
                 <li key={item.id}>
-                  <MenuItemCard item={item} />
+                  <MenuItemCard item={item} placeLabel={place.branchName ? `${place.name} ${place.branchName}` : place.name} />
                 </li>
               ))}
             </ul>
@@ -270,7 +271,7 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
 
 // ---------- menu ----------
 
-function MenuItemCard({ item }: { item: MenuItemDetail }) {
+function MenuItemCard({ item, placeLabel }: { item: MenuItemDetail; placeLabel: string }) {
   const channels = new Set(item.sizes.flatMap((s) => s.prices.map((p) => p.channel)));
   const nutrition = item.sizes.map((s) => s.nutrition).filter((n) => n !== null);
   const assumptions = item.sizes.filter((s) => s.nutrition?.assumptions);
@@ -285,7 +286,7 @@ function MenuItemCard({ item }: { item: MenuItemDetail }) {
       {item.description && <p className="text-sm text-muted-foreground">{item.description}</p>}
 
       <div className="-mx-1 overflow-x-auto">
-        <table className="w-full min-w-[19rem] text-sm">
+        <table className="w-full min-w-[18rem] text-sm">
           <caption className="sr-only">{item.name}: price and nutrition per size</caption>
           <thead>
             <tr className="text-left text-xs text-muted-foreground">
@@ -399,6 +400,7 @@ function MenuItemCard({ item }: { item: MenuItemDetail }) {
           </p>
         )}
       </div>
+      <CompareSizeButtons sizes={item.sizes.map((s) => ({ id: s.id, label: s.label }))} drinkName={item.name} placeName={placeLabel} />
     </article>
   );
 }

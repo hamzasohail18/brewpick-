@@ -163,6 +163,15 @@ location check reports "missing" and captures are flagged; use a deployed HTTPS 
 
 `/places/[slug]` shows the menu per size with tax flag, calories, sugar and caffeine. Every price shows its confidence, last-checked date, source, source link and menu photo where there is one. Estimated nutrition shows how it was estimated. The page also lists milk options with price and calorie differences, allergens, ingredients, beans, today's active deals (with a badge when a deal ends within 48 hours), weekly hours and a map. Source names come from the `v_source_labels` view, so the public sees a source's name without the registry's review notes.
 
+### Compare
+
+`/compare` puts 2–4 drinks side by side as a real table: drinks are columns and measures are rows, so screen readers read each cell with its row and column. A selection is a shareable link:
+
+- `/compare?places=a,b,c&drink=latte` compares the same drink across places. For each place it picks the size closest to a regular cup (350 ml), dine-in before takeaway. A place that doesn't serve the drink still gets a column, marked "Not on the menu".
+- `/compare?items=<item_size id>,...` compares specific sizes picked with the "Compare" buttons on a place's menu.
+
+Picks collect in a tray (kept in this browser only) from the Explore cards and the place pages. The page can also start from scratch: pick a drink, then places. Rows are price, price after deals, size, price per 100 ml, calories, sugar, caffeine, calories per Rs 100, beans, distance, open now, rating, deals, and confidence with source. The best value in each row is marked with ✓ and a label, not colour alone. Lower wins for prices and calories; higher wins for caffeine ("strongest") and rating. Unknown values never win, and a row where all values are equal marks nothing. "After deals" counts only deals open to everyone right now; the user's saved cards come with the Deals step. Share uses the phone's share sheet (or copies the link); WhatsApp opens with a text summary and the link.
+
 **Map tiles:** the map uses Leaflet with OpenStreetMap's standard tile server by default. That's fine for development and light use, but the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/) doesn't allow heavy traffic. Before launch, set `NEXT_PUBLIC_MAP_TILE_URL` (and `NEXT_PUBLIC_MAP_ATTRIBUTION`) to a tile provider with a suitable plan, or self-host tiles.
 
 ## Sample data

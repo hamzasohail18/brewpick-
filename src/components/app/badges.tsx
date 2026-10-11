@@ -15,15 +15,25 @@ export function ConfidenceBadge({
   level,
   checkedAt,
   className,
+  wrap = false,
 }: {
   level: ConfidenceLevel;
   checkedAt?: string | null;
   className?: string;
+  /** Allow the label to wrap (narrow table cells). */
+  wrap?: boolean;
 }) {
   const t = getT();
   const { icon: Icon, className: tone } = CONFIDENCE_STYLE[level];
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap", tone, className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+        wrap ? "break-words" : "whitespace-nowrap",
+        tone,
+        className,
+      )}
+    >
       <Icon aria-hidden className="size-3" />
       {t(`confidence.${level}`)}
       {checkedAt !== undefined && <span className="font-normal opacity-80">· {checkedAgo(checkedAt)}</span>}
@@ -32,13 +42,14 @@ export function ConfidenceBadge({
 }
 
 /** Shown on every fictional record (Section 9). */
-export function SampleBadge({ className }: { className?: string }) {
+export function SampleBadge({ className, wrap = false }: { className?: string; wrap?: boolean }) {
   const t = getT();
   return (
     <span
       title={t("badge.sampleHint")}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-dashed border-warning bg-warning/15 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-foreground",
+        "inline-flex items-center gap-1 rounded-full border border-dashed border-warning bg-warning/15 px-2 py-0.5 text-xs font-semibold text-foreground",
+        wrap ? "break-words" : "whitespace-nowrap",
         className,
       )}
     >

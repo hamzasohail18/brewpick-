@@ -164,3 +164,8 @@ body:has([data-bottom-nav]) {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   background: var(--muted);
 }
+
+/* Extra room while the compare tray floats above the bottom nav. */
+body:has([data-compare-tray]) {
+  padding-bottom: calc(8rem + env(safe-area-inset-bottom));
+}

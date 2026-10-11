@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Star, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfidenceBadge, SampleBadge, Tone } from "@/components/app/badges";
+import { ComparePlaceToggle } from "@/components/app/compare-buttons";
 import { formatDistance } from "@/lib/capture/geo";
 import { CHANNEL_LABELS, formatPkr } from "@/lib/explore/format";
 import { PLACE_TYPE_LABELS } from "@/lib/explore/filters";
@@ -80,7 +81,8 @@ export function PlaceCard({ place, pick, distanceM, distanceFrom, open, classNam
             {place.dealCount} {place.dealCount === 1 ? "deal" : "deals"}
           </span>
         )}
-        <span className="ms-auto">
+        <span className="ms-auto flex flex-wrap items-center justify-end gap-2">
+          {place.hasMenu && <ComparePlaceToggle slug={place.slug} label={place.branchName ? `${place.name} ${place.branchName}` : place.name} />}
           {pick ? (
             <ConfidenceBadge level={pick.priceConfidence} checkedAt={pick.priceVerifiedAt} />
           ) : (
