@@ -31,6 +31,10 @@ sources ─▶│ guard ─▶ fetch/OCR ─▶ normalize ─▶ validate │─
 | Confidence decays in reads, not writes | `display_confidence()` drops one level after 30 days, so the stored value stays the reviewer's judgement |
 | Distance and "open now" computed on the phone | The user's location never reaches the server; filters that need the database go in the URL instead |
 | Saved cards stored locally by default | Bank/app *names* only; synced to `user_payment_methods` only when signed in |
+| Hand-written service worker, network first for pages | Works with Turbopack builds without a plugin; fresh data when online, the last copy offline, nothing private cached |
+| One scheduler pass from cron (GitHub Actions) | No extra queue to run; each source's own interval and rate limit decide what runs; failures fail the job |
+| Ownership of claimed places in its own table | `place_owners` is RLS-private (owner + admins); the public row only says "claimed" |
+| OCR locally with Tesseract | No image leaves the server; the English model ships in `node_modules`, so runs work offline and need no key |
 
 ## Folder structure
 
@@ -38,13 +42,15 @@ sources ─▶│ guard ─▶ fetch/OCR ─▶ normalize ─▶ validate │─
 brewpick-lahore/
 ├─ supabase/
 │  ├─ migrations/          schema, views/functions, RLS (timestamped, applied in order)
-│  ├─ seeds/               reference data, source registry (sample places come later)
+│  ├─ seeds/               reference data, source registry, fictional sample places
 │  ├─ test/                Supabase auth/role shim used only by tests
 │  └─ config.toml
 ├─ src/
 │  ├─ app/                 Next.js App Router
 │  │  ├─ (app)/            Home · Explore · Compare · Deals · Profile (bottom nav)
-│  │  ├─ admin/            sources, collectors, review queue, audit log, Menu Capture, moderation
+│  │  ├─ admin/            sources (+ Run now), review queue, moderation, CSV import, manual deal entry
+│  │  ├─ offline/          page the service worker shows for pages not saved yet
+│  │  └─ manifest.ts       web app manifest (installable PWA)
 │  │  └─ api/              server routes (submissions, publisher, run-now)
 │  ├─ components/          UI (shadcn/ui in components/ui)
 │  ├─ lib/
@@ -63,11 +69,20 @@ brewpick-lahore/
 │  │  └─ i18n/             message catalogues (en, ur) and RTL helpers
 │  └─ ...
 ├─ collectors/
-│  ├─ lib/                 runner (guard + run log), polite fetch, robots.txt
-│  └─ ...                  osm, google-places, website (JSON-LD/HTML), ocr, bank-offers
-├─ scripts/                normalize, validate, CSV import/export, purge-sample-data
-├─ tests/                  db (PGlite), fixtures (HTML/images), e2e (Playwright)
+│  ├─ lib/                 runner (guard + run log), polite fetch, robots.txt, snapshots, scheduler,
+│  │                       menu-line -> record helpers, merge-with-live-place
+│  ├─ registry.ts          which collector serves a source (by slug, then by kind)
+│  ├─ osm/                 Overpass importer
+│  ├─ google-places/       Places API (New) Text Search
+│  ├─ website/             cafe menu pages: JSON-LD first, HTML layout fallback
+│  ├─ menu-file/           menu PDFs (text layer) and images (Tesseract OCR)
+│  └─ bank-offers/         bank offer pages (manual entry fallback at /admin/deals/new)
+├─ public/sw.js            service worker (offline copies of opened pages)
+├─ scripts/                collect, scheduler, CSV import, sample data, purge, make-icons
+├─ tests/                  unit + db tests (PGlite), fixtures (HTML, PDF, image, API JSON)
+├─ e2e/                    Playwright: key journeys, offline, accessibility (axe)
+├─ .github/workflows/      daily scheduler run
 └─ docs/
 ```
 
-Folders under `src/app/(app)`, `admin`, `collectors` and `scripts` are created as each build step lands.
+

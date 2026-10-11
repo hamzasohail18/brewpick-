@@ -80,18 +80,21 @@ export interface LahoreNow {
   seconds: number; // since local midnight
 }
 
+// Built once: constructing a time-zone formatter is slow and deal lists call this per card.
+const nowFmt = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Karachi",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  weekday: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
 export function lahoreNow(at: Date = new Date()): LahoreNow {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Karachi",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(at);
+  const parts = nowFmt.formatToParts(at);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return {
     date: `${get("year")}-${get("month")}-${get("day")}`,

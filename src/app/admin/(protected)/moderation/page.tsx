@@ -167,7 +167,7 @@ async function Claims({ admin }: { admin: Admin }) {
           <p className="text-xs text-muted-foreground">
             Check independently: call the number listed for the cafe (not one given in the claim), or email the cafe&apos;s own domain.
           </p>
-          {c.claimed_by ? <p className="text-sm text-destructive">This place already has an owner. Approving will fail until that is removed.</p> : null}
+          {c.owned_by_other ? <p className="text-sm text-destructive">This place already has an owner. Approving will fail until that is removed.</p> : null}
           <form action={claimAction} className="flex flex-wrap gap-2">
             <input type="hidden" name="id" value={String(c.id)} />
             <NoteInput placeholder="Note (required to reject)" />

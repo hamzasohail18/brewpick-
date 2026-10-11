@@ -15,7 +15,7 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
   const notVolunteer = sp.error === "not_volunteer";
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-4 py-10">
+    <main id="main" className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-4 py-10">
       <Card>
         <CardHeader>
           <CardTitle>

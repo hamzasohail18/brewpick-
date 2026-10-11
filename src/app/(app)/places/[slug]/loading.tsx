@@ -1,6 +1,7 @@
 export default function Loading() {
+  // At least a screen tall, so the footer stays below the fold until the page arrives (no layout shift).
   return (
-    <main className="mx-auto max-w-2xl space-y-4 px-4 py-6" aria-busy="true" aria-label="Loading place">
+    <main id="main" className="mx-auto min-h-dvh max-w-2xl space-y-4 px-4 py-6" aria-busy="true" aria-label="Loading place">
       <div className="h-8 w-2/3 animate-pulse rounded bg-muted" />
       <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
       <div className="flex gap-2">

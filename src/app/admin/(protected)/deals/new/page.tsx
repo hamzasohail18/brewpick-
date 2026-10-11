@@ -11,7 +11,8 @@ export default async function NewDealPage() {
   const admin = await requireAdmin("/admin/deals/new");
   const data = await dbAs(admin, async (tx) => ({
     sources: await tx.query<{ slug: string; name: string; kind: string; base_url: string | null }>(
-      "select slug, name, kind::text, base_url from sources where is_active and kind = any($1::source_kind[]) order by kind, name",
+      // The fictional sample-data source is for seeded test rows only, never for hand entry.
+      "select slug, name, kind::text, base_url from sources where is_active and kind = any($1::source_kind[]) and slug <> 'sample-data' order by kind, name",
       [MANUAL_DEAL_SOURCE_KINDS],
     ),
     brands: await tx.query<{ id: string; name: string; is_sample: boolean }>("select id, name, is_sample from brands order by name"),

@@ -54,7 +54,7 @@ export function DealsApp({ deals }: { deals: DealView[] }) {
   const usableCount = nowDate ? deals.filter((d) => dealStatus(d, cards, lahoreNow(nowDate)).usable).length : null;
 
   return (
-    <main className="mx-auto max-w-2xl">
+    <main id="main" className="mx-auto max-w-2xl">
       <div className="sticky top-0 z-30 space-y-3 border-b bg-background/95 px-4 pt-4 pb-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{t("nav.deals")}</h1>

@@ -322,7 +322,8 @@ export function pickForMe(candidates: readonly Candidate[], answers: Answers, ct
 
 // ---------- reasons ----------
 
-const rs = (n: number) => `Rs ${new Intl.NumberFormat("en-PK").format(n)}`;
+const pkrFmt = new Intl.NumberFormat("en-PK");
+const rs = (n: number) => `Rs ${pkrFmt.format(n)}`;
 
 function where(p: Pick, ctx: Context): string | null {
   if (p.travel) return `${p.travel.minutes} min ${p.travel.mode === "walk" ? "walk" : "drive"} away`;

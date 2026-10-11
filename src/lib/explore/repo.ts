@@ -247,7 +247,7 @@ export async function getPlaceDetail(db: Db, slug: string): Promise<PlaceDetail 
             p.halal_certified, p.has_wifi, p.has_family_seating, p.has_drive_thru,
             display_confidence(p.confidence, coalesce(p.last_verified_at, p.created_at)) as confidence,
             coalesce(p.last_verified_at, p.created_at) as verified_at,
-            p.address, p.phone, p.website_url, p.instagram_handle, b.name as brand_name, p.claimed_by is not null as is_claimed,
+            p.address, p.phone, p.website_url, p.instagram_handle, b.name as brand_name, p.is_claimed,
             sl.name as source_name, sl.kind as source_kind
        from places p
        left join areas a on a.id = p.area_id

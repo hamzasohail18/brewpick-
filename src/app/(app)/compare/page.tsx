@@ -20,7 +20,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
 
   if (selectionSize(selection) === 0) {
     return (
-      <main className="mx-auto max-w-2xl space-y-4 px-4 py-6">
+      <main id="main" className="mx-auto max-w-2xl space-y-4 px-4 py-6">
         <h1 className="text-2xl font-semibold">{t("nav.compare")}</h1>
         <CompareStart drinks={drinks} />
       </main>
@@ -30,7 +30,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
   const result = await dbAs(ANON, (tx) => getComparison(tx, selection));
   const resolved = { ...selection, drink: selection.places.length ? (result.drink?.slug ?? null) : null };
   return (
-    <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
+    <main id="main" className="mx-auto max-w-3xl space-y-4 px-4 py-6">
       <div>
         <h1 className="text-2xl font-semibold">{t("nav.compare")}</h1>
         <p className="text-sm text-muted-foreground">

@@ -29,7 +29,11 @@ schema with the Supabase CLI (`npm run db:reset` locally, or `supabase db push` 
 npm test               # unit + database tests (real migrations in PGlite; no Docker)
 npm run lint
 npm run typecheck
+npm run test:e2e       # Playwright on a production build: 4-tap pick, 360 px compare, offline, WCAG 2.1 AA (axe)
 ```
+
+`test:e2e` builds the app, starts it on port 3100 with its own database (`.data/pglite-e2e`) and drives
+the Chrome installed on your machine. Stop `npm run dev` first if it uses port 3100.
 
 ## Environment variables
 
@@ -46,6 +50,9 @@ npm run typecheck
 | `APP_URL` | server | Public origin used in stored proof-photo links (e.g. `https://brewpick.pk`) |
 | `CAPTURE_MAX_DISTANCE_M` | server | How close to a place a Menu Capture must be made (default 200) |
 | `GOOGLE_PLACES_API_KEY`, `USDA_FDC_API_KEY` | collectors | Optional; only used once the source is reviewed |
+| `COLLECTOR_EXECUTION` | server | `queue` makes **Run now** queue the run for the scheduler instead of running it in the web process (use on serverless hosts) |
+| `ALERT_WEBHOOK_URL` | scheduler | Optional Slack-compatible incoming webhook for collector failures |
+| `NEXT_PUBLIC_SW_IN_DEV` | browser | `1` registers the service worker under `next dev` too (normally production only) |
 | `NEXT_PUBLIC_MAP_TILE_URL` | browser | Map tile template (default: OpenStreetMap's standard tiles, see the map note below) |
 | `NEXT_PUBLIC_MAP_ATTRIBUTION` | browser | Attribution HTML for that tile provider |
 
@@ -124,6 +131,38 @@ To run it, an admin first reviews the source in `/admin/sources` (Overpass usage
 and `COLLECTOR_CONTACT_EMAIL` must be set. Then use **Run now**, or `npm run collect -- osm-overpass-lahore`
 against a hosted database. New places land in the review queue; later runs re-confirm unchanged places
 automatically.
+
+## Other collectors
+
+All collectors run through the same guard, run log, snapshot store and review queue as the OSM importer.
+Nothing they find goes live without review.
+
+| Collector | Source kind | What it does |
+|---|---|---|
+| `collectors/website` | `cafe_website` (one source per cafe, `place_id` set, `base_url` = menu page) | Reads schema.org `Menu`/`MenuItem`/`Offer` JSON-LD first; otherwise guesses items from the page layout (cards, size lists, tables) and flags them *Guessed from page layout*. Also proposes opening hours if the page states them. Only PKR prices are kept. |
+| `collectors/menu-file` | `cafe_menu_file` (one per cafe, `base_url` = the PDF or image) | PDFs: the text layer. Images: OCR with Tesseract and the English model shipped in `node_modules` (no download at run time). Every record is flagged *Read by OCR* (and *OCR unsure* below 75% confidence) for mandatory review. Scanned PDFs without text are reported, not guessed. The file is kept as an audit snapshot only. |
+| `collectors/google-places` | `google-places-api` | Official Places API (New) Text Search inside the Lahore box. Needs `GOOGLE_PLACES_API_KEY` (sent as a header). Merges with existing places so it never blanks fields Google doesn't know (Wi-Fi, halal, etc.). Reviewers are reminded of the caching limit in the source's notes. |
+| `collectors/bank-offers` | `bank_offer_page` (`base_url` = the bank's offers page) | Keeps only offers that name a real (non-sample) cafe or brand in the directory and states a discount and an end date. Offers missing either are listed in the run log for manual entry. No start date on the page = the day it was read, said so in the deal's conditions. |
+
+Bank sources are seeded as *needs review*. Until an admin confirms automation is allowed, add their offers
+by hand at **`/admin/deals/new`** (also for Instagram/Facebook promos and delivery-app deals): the
+offer page URL is required as the source for bank offers, and a JPEG screenshot can be attached as proof.
+
+### Scheduling
+
+`npm run scheduler` (daily via `.github/workflows/scheduled-collect.yml`, 03:00 Lahore time) does one pass:
+
+1. archives published deals whose end date has passed (Asia/Karachi), with an audit row;
+2. starts runs queued from **Run now** (when `COLLECTOR_EXECUTION=queue`); a queued run whose source
+   has since been blocked is marked failed with the reason;
+3. runs every collectable source that is due: never run, or `next_check_at` reached (the registry's
+   `check_interval_days`: menus 14, deals 1, places 30), or weekly for per-cafe sources of the 20
+   most-favourited places;
+4. exits non-zero if any collector failed (GitHub emails the repo owner) and, if `ALERT_WEBHOOK_URL`
+   is set, posts a summary there. Sources still waiting for a human review are skipped quietly.
+
+The workflow needs the `DATABASE_URL` and `COLLECTOR_CONTACT_EMAIL` repository secrets; without
+`DATABASE_URL` it only prints a notice. Raw snapshots are uploaded as a workflow artifact (90 days).
 
 ## Menu Capture (in-store prices)
 
@@ -221,11 +260,31 @@ Language: the setting is in place but Urdu is marked "coming soon". The message 
 - **Suggestions** (`/places/[slug]/suggest`, signed in): a price change, missing drink, new deal, opening hours, or free text. All but free text need a photo (metadata stripped). Structured suggestions become staged records in the **review queue** (source *Community submissions*, flag *community*) with the photo as evidence. The submission's status follows the review, and senders see it under Profile → My submissions. Free text goes to **Moderation**. If the sender says "not sure" about tax, the known value is kept. Limit: 20 suggestions, reports and claims per user per day.
 - **Deal votes**: "Worked / Didn't work" on every deal (one vote per user; tallies are public, individual votes private). Deals with at least 3 "didn't work" votes, and more of those than "worked", appear under Moderation → Disputed deals, where an admin can take them down (audited).
 - **Reports** (`/places/[slug]/report`): closed, wrong hours/location/price, deal not honoured, duplicate, other.
-- **Owner claims** (`/places/[slug]/claim`): verify by a call to the cafe's *listed* number, a business email on the cafe's domain, or a document photo. Documents are stored privately (`.data/private-uploads`, served only to admins at `/admin/files/...`). Approving sets `places.claimed_by`.
+- **Owner claims** (`/places/[slug]/claim`): verify by a call to the cafe's *listed* number, a business email on the cafe's domain, or a document photo. Documents are stored privately (`.data/private-uploads`, served only to admins at `/admin/files/...`). Approving records the owner in `place_owners`, which only that owner and admins can read; the public sees only a "claimed" flag.
 - **Owner portal** (`/owner`): "Confirm my menu is up to date" re-confirms every current price as the owner; unchanged prices move up to **Verified** at once. Owner price changes, drinks, deals and hours go through review (source *Owner portal*, flag *owner update*) and publish as Verified.
 - **Confidence on re-confirmation**: a stronger source re-confirming unchanged data (an owner, or an in-store check) raises it to that level; it never lowers it.
 
 **Map tiles:** the map uses Leaflet with OpenStreetMap's standard tile server by default. That's fine for development and light use, but the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/) doesn't allow heavy traffic. Before launch, set `NEXT_PUBLIC_MAP_TILE_URL` (and `NEXT_PUBLIC_MAP_ATTRIBUTION`) to a tile provider with a suitable plan, or self-host tiles.
+
+## Installable app and offline use
+
+- `src/app/manifest.ts` + icons (`node scripts/make-icons.mjs` regenerates them) make the app installable.
+- `public/sw.js` (production builds only) keeps pages and public data you've opened: content-hashed
+  scripts are cached first; pages and `/api/places|pick|deals|payment-methods` go to the network first
+  (6 s timeout) and fall back to the saved copy, then to `/offline`, which lists your recent and
+  favourite places. Admin, capture, owner, sign-in and `/api/me` responses are never cached.
+- Offline, a banner says the data are saved copies that may have changed.
+
+## Performance and accessibility
+
+- Checked with axe (WCAG 2.1 A/AA) on the main screens in light and dark mode, plus keyboard navigation
+  (skip link, bottom navigation); runs in `npm run test:e2e`.
+- Sheets (cards, location, filters) and the place page's map load on first use, not with the page.
+  The server's clock is handed to the browser so "open now" lists don't re-sort after load (no layout
+  shift). The stylesheet is inlined; only the main font is preloaded.
+- Lighthouse (mobile, simulated slow 4G, median of 3) on a busy development laptop: Pick for me 98,
+  Home 91, Compare 90, Profile 86, Explore 85, Deals 81, place page 77; layout shift 0 on all but an
+  empty Compare. Measure the deployed site with PageSpeed Insights for real numbers.
 
 ## Sample data
 
@@ -249,12 +308,16 @@ and run `npm run sample:generate` to change it. Remove it all with `npm run samp
 
 ## Data sources and legal notes
 
-<!-- Expanded as collectors land (Section 7.8). -->
 - Every source is listed in the `sources` registry with its automation status and review date.
   Collectors refuse to run unless a source is `allowed` or `allowed_with_conditions`, and the database
   refuses those statuses until `automation_notes` and `robots_checked_at` are filled.
 - Third-party sources are seeded as `unknown_review_required`; the intended status is in `automation_notes`.
 - Attribution (footer and About page) lists only sources we actually hold data from.
 - We store facts (prices, items, hours) and link to the source; we don't republish others' photos or text.
+  Raw pages and menu files fetched by collectors are kept privately as audit snapshots only.
+- Websites and menu files obey robots.txt; APIs and open data follow their usage terms and licence
+  (recorded in the source's review). A 401/403 from a site switches its source to `not_allowed`.
+- Google Places data must respect Google's caching and attribution terms (record them in the source's
+  notes and set `max_cache_days`); bank offer pages are entered by hand unless their terms allow automation.
 - Verified, community-reported and estimated data are kept visually distinct in the UI.
 - Takedown / correction contact: *to be set before launch*.

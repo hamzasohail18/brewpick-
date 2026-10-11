@@ -75,7 +75,7 @@ export type ClaimInput = z.infer<typeof ClaimInput>;
 
 /** Run as the user (RLS own_insert keeps status pending and user_id = them). */
 export async function createClaim(db: Db, userId: string, placeId: string, input: ClaimInput, documentUrl: string | null): Promise<string> {
-  const [place] = await db.query<{ claimed_by: string | null }>("select claimed_by from places where id = $1", [placeId]);
+  const [place] = await db.query<{ id: string }>("select id from places where id = $1", [placeId]);
   if (!place) throw new SubmissionRejected("That place isn't in the directory.", 404);
   if (input.verification_method === "document" && !documentUrl) throw new SubmissionRejected("Add a photo of a document that shows you run this place.");
   if ((await countToday(db, userId)) >= DAILY_LIMIT) throw new SubmissionRejected("You've sent a lot today. Please try again tomorrow.", 429);
@@ -98,7 +98,7 @@ export async function myClaim(db: Db, userId: string, placeId: string) {
   return c ?? null;
 }
 
-/** Admin decision. Approving makes the user the place's owner in BrewPick (places.claimed_by). */
+/** Admin decision. Approving makes the user the place's owner in BrewPick (place_owners). */
 export async function decideClaim(db: Db, adminId: string, claimId: string, approve: boolean, note: string | null) {
   return db.transaction(async (tx) => {
     const [c] = await tx.query<{ id: string; place_id: string; user_id: string; status: string }>(
@@ -108,15 +108,20 @@ export async function decideClaim(db: Db, adminId: string, claimId: string, appr
     if (!c) throw new SubmissionRejected("Claim not found.", 404);
     if (c.status !== "pending") throw new SubmissionRejected(`Already ${c.status}.`, 409);
     if (approve) {
-      const [place] = await tx.query<{ claimed_by: string | null }>("select claimed_by from places where id = $1 for update", [c.place_id]);
-      if (place.claimed_by && place.claimed_by !== c.user_id) {
+      await tx.query("select 1 from places where id = $1 for update", [c.place_id]);
+      const [owner] = await tx.query<{ user_id: string }>("select user_id from place_owners where place_id = $1", [c.place_id]);
+      if (owner && owner.user_id !== c.user_id) {
         throw new SubmissionRejected("Someone else already owns this place in BrewPick. Remove that first.", 409);
       }
-      await tx.query("update places set claimed_by = $2 where id = $1", [c.place_id, c.user_id]);
+      await tx.query(
+        `insert into place_owners (place_id, user_id, claim_id) values ($1, $2, $3)
+         on conflict (place_id) do update set claim_id = excluded.claim_id`,
+        [c.place_id, c.user_id, c.id],
+      );
       await tx.query(
         `insert into audit_log (actor_id, actor_kind, table_name, record_id, action, old_values, new_values)
-         values ($1, 'admin', 'places', $2, 'claim_approved', $3, $4)`,
-        [adminId, c.place_id, JSON.stringify({ claimed_by: place.claimed_by }), JSON.stringify({ claimed_by: c.user_id, claim_id: c.id })],
+         values ($1, 'admin', 'place_owners', $2, 'claim_approved', $3, $4)`,
+        [adminId, c.place_id, JSON.stringify({ user_id: owner?.user_id ?? null }), JSON.stringify({ user_id: c.user_id, claim_id: c.id })],
       );
     } else if (!note?.trim()) {
       throw new SubmissionRejected("Say why, so the person knows what to send.");
@@ -137,8 +142,8 @@ export async function ownedPlaces(db: Db, userId: string) {
               where mi.place_id = p.id and pr.is_current) as prices,
             (select min(coalesce(pr.last_verified_at, pr.captured_at)) from item_prices pr join item_sizes s on s.id = pr.item_size_id
                join menu_items mi on mi.id = s.menu_item_id where mi.place_id = p.id and pr.is_current) as oldest_check
-       from places p left join areas a on a.id = p.area_id
-      where p.claimed_by = $1 and p.status = 'published' order by p.name`,
+       from places p join place_owners o on o.place_id = p.id left join areas a on a.id = p.area_id
+      where o.user_id = $1 and p.status = 'published' order by p.name`,
     [userId],
   );
 }
@@ -150,8 +155,11 @@ export async function ownedPlaces(db: Db, userId: string) {
  */
 export async function confirmMenu(db: Db, userId: string, placeId: string, now = new Date()): Promise<StageSummary> {
   return db.transaction(async (tx) => {
-    const [place] = await tx.query<{ claimed_by: string | null }>("select claimed_by from places where id = $1 and status = 'published'", [placeId]);
-    if (!place || place.claimed_by !== userId) throw new SubmissionRejected("Only the verified owner can confirm this menu.", 403);
+    const owns = await tx.query(
+      "select 1 from places p join place_owners o on o.place_id = p.id where p.id = $1 and p.status = 'published' and o.user_id = $2",
+      [placeId, userId],
+    );
+    if (!owns.length) throw new SubmissionRejected("Only the verified owner can confirm this menu.", 403);
     const [source] = await tx.query<{ id: string }>("select id from sources where slug = 'owner-portal'");
     const rows = await tx.query<Record<string, unknown>>(
       `select mi.display_name, dt.slug as drink_slug, mi.temperature, mi.has_milk, s.size_label, s.volume_ml, s.volume_is_assumed,
@@ -242,7 +250,8 @@ export async function resolveReport(db: Db, adminId: string, id: string, outcome
 
 export async function listClaims(db: Db, status: "pending" | "approved" | "rejected") {
   return db.query<Record<string, unknown>>(
-    `select c.*, p.slug as place_slug, p.name as place_name, p.branch_name, p.phone as listed_phone, p.website_url, p.claimed_by
+    `select c.*, p.slug as place_slug, p.name as place_name, p.branch_name, p.phone as listed_phone, p.website_url,
+            exists (select 1 from place_owners o where o.place_id = p.id and o.user_id <> c.user_id) as owned_by_other
        from place_claims c join places p on p.id = c.place_id
       where c.status = $1 order by c.created_at desc limit 100`,
     [status],

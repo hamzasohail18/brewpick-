@@ -21,7 +21,7 @@ export default async function ClaimPage({ params }: PageProps<"/places/[slug]/cl
   const title = place.branchName ? `${place.name}, ${place.branchName}` : place.name;
 
   return (
-    <main className="mx-auto max-w-md space-y-5 px-4 pt-3 pb-8">
+    <main id="main" className="mx-auto max-w-md space-y-5 px-4 pt-3 pb-8">
       <Link href={`/places/${slug}`} className="-ms-2 inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft aria-hidden className="size-4" />
         {title}

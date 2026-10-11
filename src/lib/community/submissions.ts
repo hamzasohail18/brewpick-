@@ -109,7 +109,8 @@ export async function createSubmission(
     }
     await ensureProfile(tx, opts.userId);
 
-    const asOwner = place.claimed_by === opts.userId;
+    // Readable by the owner themselves (RLS own_read) and by the service role.
+    const asOwner = (await tx.query("select 1 from place_owners where place_id = $1 and user_id = $2", [opts.placeId, opts.userId])).length > 0;
     const sourceSlug = asOwner ? "owner-portal" : "community-submissions";
     const [source] = await tx.query<{ id: string }>("select id from sources where slug = $1", [sourceSlug]);
     if (!source) throw new Error(`Source ${sourceSlug} is missing from the registry.`);

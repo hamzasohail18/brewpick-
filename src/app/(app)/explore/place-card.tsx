@@ -42,7 +42,7 @@ export function PlaceCard({ place, pick, distanceM, distanceFrom, open, classNam
                 · <Star aria-hidden className="size-3 fill-current text-warning" />
                 <span className="sr-only">Rating</span>
                 {place.rating.toFixed(1)}
-                <span className="opacity-80">({place.ratingCount})</span>
+                <span className="font-normal">({place.ratingCount})</span>
               </span>
             )}
           </p>

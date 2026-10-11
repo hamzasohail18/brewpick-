@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useRef, useState } from "react";
 import { Tone } from "@/components/app/badges";
 import { formatDistance } from "@/lib/capture/geo";
 import { describeOpenStatus, openStatus, type HoursRow } from "@/lib/explore/hours";
@@ -31,15 +32,24 @@ export function LiveStatus({ hours, lat, lng }: { hours: HoursRow[]; lat: number
   );
 }
 
+/** Leaflet and its tiles load only when the map is about to scroll into view (it sits below the fold). */
 export function MiniMap({ lat, lng, name }: { lat: number; lng: number; name: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || near) return;
+    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setNear(true), { rootMargin: "300px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [near]);
   return (
-    <div className="h-48 overflow-hidden rounded-xl border">
-      <PlacesMap
-        className="h-full w-full"
-        zoom={16}
-        interactive={false}
-        pins={[{ id: "here", lat, lng, label: "☕", title: name }]}
-      />
+    <div ref={ref} className="h-48 overflow-hidden rounded-xl border">
+      {near ? (
+        <PlacesMap className="h-full w-full" zoom={16} interactive={false} pins={[{ id: "here", lat, lng, label: "☕", title: name }]} />
+      ) : (
+        <div className="h-full w-full bg-muted" />
+      )}
     </div>
   );
 }

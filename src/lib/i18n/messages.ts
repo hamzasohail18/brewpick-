@@ -4,6 +4,7 @@
 export const en = {
   "app.name": "BrewPick Lahore",
   "app.tagline": "Where should I get coffee right now?",
+  "a11y.skipToContent": "Skip to content",
   "footer.disclaimer": "Prices and deals may change; confirm with the cafe.",
   "footer.dataSources": "Data sources",
   "footer.about": "About & data sources",

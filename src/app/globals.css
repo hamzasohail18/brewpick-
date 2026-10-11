@@ -63,8 +63,8 @@
   --muted-foreground: oklch(0.47 0.03 55);
   --accent: oklch(0.92 0.04 75);
   --accent-foreground: oklch(0.3 0.05 50);
-  --destructive: oklch(0.55 0.2 27);
-  --success: oklch(0.5 0.12 150);
+  --destructive: oklch(0.5 0.19 27);      /* 5.3:1 on cream tints (WCAG AA) */
+  --success: oklch(0.45 0.11 150);         /* ≥5.8:1 as badge text on its own tint */
   --warning: oklch(0.62 0.14 70);
   --border: oklch(0.88 0.02 70);
   --input: oklch(0.86 0.02 70);

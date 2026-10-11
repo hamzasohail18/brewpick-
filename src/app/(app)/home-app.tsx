@@ -55,7 +55,7 @@ export function HomeApp({ places, deals, areas }: { places: PlaceSummary[]; deal
   }, [deals, cards, now]);
 
   return (
-    <main className="mx-auto max-w-2xl space-y-8 px-4 pt-6 pb-8">
+    <main id="main" className="mx-auto max-w-2xl space-y-8 px-4 pt-6 pb-8">
       <header className="flex items-center justify-between gap-3">
         <p className="text-lg font-semibold">{t("app.name")}</p>
         <Button variant="outline" className="h-11 max-w-[55%] rounded-full" onClick={() => setLocationOpen(true)}>

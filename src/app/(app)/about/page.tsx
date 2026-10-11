@@ -10,7 +10,7 @@ export default async function AboutPage() {
   const t = getT();
   const credits = await attributions();
   return (
-    <main className="mx-auto max-w-2xl space-y-8 px-4 py-10">
+    <main id="main" className="mx-auto max-w-2xl space-y-8 px-4 py-10">
       <div className="space-y-3">
         <h1 className="text-2xl font-semibold">{t("about.title")}</h1>
         <p>{t("about.intro")}</p>

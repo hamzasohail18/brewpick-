@@ -161,7 +161,13 @@ describe("owner claims and the owner portal", () => {
     // Not an owner yet: confirming the menu is refused.
     await expect(service((tx) => confirmMenu(tx, OWNER.userId, kite))).rejects.toMatchObject({ status: 403 });
     await service((tx) => decideClaim(tx, ADMIN.id, claimId, true, null));
-    expect(await db.query("select claimed_by from places where id = $1", [kite])).toEqual([{ claimed_by: OWNER.userId }]);
+    expect(await db.query("select user_id from place_owners where place_id = $1", [kite])).toEqual([{ user_id: OWNER.userId }]);
+
+    // Who owns it is private: the public sees only "claimed"; the owner sees their own row; others nothing.
+    expect(await as(ANON, (tx) => tx.query("select is_claimed from places where id = $1", [kite]))).toEqual([{ is_claimed: true }]);
+    await expect(as(ANON, (tx) => tx.query("select * from place_owners"))).rejects.toThrow(/permission denied/);
+    expect(await as(OWNER, (tx) => tx.query("select place_id from place_owners"))).toEqual([{ place_id: kite }]);
+    expect(await as(user(52), (tx) => tx.query("select place_id from place_owners"))).toEqual([]);
 
     // A second person's claim can't take the place over.
     const other = user(51);

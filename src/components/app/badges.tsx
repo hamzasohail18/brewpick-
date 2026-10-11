@@ -36,7 +36,7 @@ export function ConfidenceBadge({
     >
       <Icon aria-hidden className="size-3" />
       {t(`confidence.${level}`)}
-      {checkedAt !== undefined && <span className="font-normal opacity-80">· {checkedAgo(checkedAt)}</span>}
+      {checkedAt !== undefined && <span className="font-normal">· {checkedAgo(checkedAt)}</span>}
     </span>
   );
 }

@@ -1,8 +1,6 @@
 // Explore filters (Section 3F). They live in the URL so a filtered list can be shared or bookmarked.
 // Location never goes in the URL: distance, "open now" and the distance limit are applied on the phone.
 
-import { z } from "zod";
-
 export const PLACE_TYPES = ["specialty_cafe", "chain", "kiosk_drive_thru", "bakery_cafe"] as const;
 export const ROASTS = ["light", "medium_light", "medium", "medium_dark", "dark"] as const;
 export const ALLERGENS = ["dairy", "nuts", "gluten", "soy"] as const;
@@ -30,19 +28,31 @@ export const SORT_LABELS: Record<(typeof SORTS)[number], string> = {
   name: "A–Z",
 };
 
-const num = (max: number) =>
-  z.preprocess((v) => {
+// Plain parsers instead of a schema library: this module ships to the phone, and every rule is
+// "keep it if valid, else drop it", so a hand-edited URL never errors.
+type Parser<T> = (v: unknown) => T | undefined;
+const num =
+  (max: number): Parser<number> =>
+  (v) => {
     const n = typeof v === "number" || typeof v === "string" ? Number(v) : NaN;
     return Number.isInteger(n) && n > 0 && n <= max ? n : undefined;
-  }, z.number().optional());
-const flag = z.preprocess((v) => (v === "1" || v === "true" || v === true ? true : undefined), z.literal(true).optional());
-const oneOf = <T extends readonly [string, ...string[]]>(values: T) =>
-  z.preprocess((v) => (typeof v === "string" && (values as readonly string[]).includes(v) ? v : undefined), z.enum(values).optional());
-const slug = z.preprocess((v) => (typeof v === "string" && /^[a-z0-9_-]{1,40}$/.test(v) ? v : undefined), z.string().optional());
+  };
+const flag: Parser<true> = (v) => (v === "1" || v === "true" || v === true ? true : undefined);
+const oneOf =
+  <T extends string>(values: readonly T[]): Parser<T> =>
+  (v) =>
+    typeof v === "string" && (values as readonly string[]).includes(v) ? (v as T) : undefined;
+const slug: Parser<string> = (v) => (typeof v === "string" && /^[a-z0-9_-]{1,40}$/.test(v) ? v : undefined);
+const text: Parser<string> = (v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 60) : undefined);
+const allergens: Parser<(typeof ALLERGENS)[number][]> = (v) => {
+  const list = (Array.isArray(v) ? v : typeof v === "string" ? v.split(",") : []).filter((a): a is (typeof ALLERGENS)[number] =>
+    (ALLERGENS as readonly string[]).includes(a),
+  );
+  return list.length ? [...new Set(list)].sort() : undefined;
+};
 
-/** Every field is optional and invalid values are dropped, so a hand-edited URL never errors. */
-export const ExploreFiltersSchema = z.object({
-  q: z.preprocess((v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 60) : undefined), z.string().optional()),
+const FIELDS = {
+  q: text,
   // drink-level (server)
   drink: slug, // drink_types.slug
   temp: oneOf(["hot", "iced"] as const),
@@ -52,13 +62,7 @@ export const ExploreFiltersSchema = z.object({
   minCaffeine: num(1000),
   roast: oneOf(ROASTS),
   milk: slug, // milk_types.slug offered as an option
-  avoid: z.preprocess(
-    (v) => {
-      const list = (Array.isArray(v) ? v : typeof v === "string" ? v.split(",") : []).filter((a) => (ALLERGENS as readonly string[]).includes(a));
-      return list.length ? [...new Set(list)].sort() : undefined;
-    },
-    z.array(z.enum(ALLERGENS)).optional(),
-  ),
+  avoid: allergens,
   dairyFree: flag,
   // place-level (server)
   type: oneOf(PLACE_TYPES),
@@ -72,9 +76,11 @@ export const ExploreFiltersSchema = z.object({
   openNow: flag,
   maxKm: num(100),
   sort: oneOf(SORTS),
-});
+} satisfies Record<string, Parser<unknown>>;
 
-export type ExploreFilters = z.infer<typeof ExploreFiltersSchema>;
+/** Every field is optional and invalid values are dropped. */
+export type ExploreFilters = { [K in keyof typeof FIELDS]?: NonNullable<ReturnType<(typeof FIELDS)[K]>> };
+export const FILTER_KEYS = Object.keys(FIELDS) as (keyof ExploreFilters)[];
 
 /** Filters the server needs (everything except the on-device ones). Used as the query cache key. */
 export const SERVER_KEYS = [
@@ -96,11 +102,16 @@ export function parseFilters(input: URLSearchParams | Record<string, string | st
   } else {
     Object.assign(obj, input);
   }
-  return ExploreFiltersSchema.parse(obj);
+  const out: Record<string, unknown> = {};
+  for (const k of FILTER_KEYS) {
+    const v = (FIELDS[k] as Parser<unknown>)(obj[k]);
+    if (v !== undefined) out[k] = v;
+  }
+  return out as ExploreFilters;
 }
 
 /** Stable URL encoding (sorted keys, defaults omitted). */
-export function filtersToParams(f: ExploreFilters, keys: readonly (keyof ExploreFilters)[] = Object.keys(ExploreFiltersSchema.shape) as (keyof ExploreFilters)[]): URLSearchParams {
+export function filtersToParams(f: ExploreFilters, keys: readonly (keyof ExploreFilters)[] = FILTER_KEYS): URLSearchParams {
   const p = new URLSearchParams();
   for (const k of [...keys].sort()) {
     const v = f[k];

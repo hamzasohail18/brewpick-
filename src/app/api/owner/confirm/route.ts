@@ -7,7 +7,7 @@ import { SubmissionRejected } from "@/lib/community/submissions";
 
 const Body = z.object({ placeId: z.guid() });
 
-/** Owner: "every price on my menu is still right". Ownership (places.claimed_by) is checked in confirmMenu. */
+/** Owner: "every price on my menu is still right". Ownership (place_owners) is checked in confirmMenu. */
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return forbidden();
   const actor = await getActor();

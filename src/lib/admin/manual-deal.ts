@@ -89,7 +89,9 @@ export async function stageManualDeal(db: Db, adminId: string, d: ManualDealForm
     "select id, kind::text, default_confidence::text from sources where slug = $1 and is_active",
     [d.source],
   );
-  if (!source || !(MANUAL_DEAL_SOURCE_KINDS as readonly string[]).includes(source.kind)) return { error: "Choose a source you can enter deals from." };
+  if (!source || d.source === "sample-data" || !(MANUAL_DEAL_SOURCE_KINDS as readonly string[]).includes(source.kind)) {
+    return { error: "Choose a source you can enter deals from." };
+  }
   if (source.kind === "bank_offer_page" && !d.source_url) return { error: "Bank offers need the offer page's address as the source URL." };
   if (!d.source_url && !proofImageUrl) return { error: "Add the source URL or a screenshot." };
 

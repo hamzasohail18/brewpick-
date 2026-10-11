@@ -66,7 +66,7 @@ function Question({ state, step }: { state: QuizState; step: Exclude<Step, "resu
           : DISTANCES.map((d) => ({ label: d.label, hint: d.hint, next: { ...state, maxKm: d.value === "any" ? null : Number(d.value) } }));
 
   return (
-    <main className="mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-md flex-col px-4 py-4">
+    <main id="main" className="mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-md flex-col px-4 py-4">
       <div className="flex items-center gap-2">
         {index > 0 ? (
           <Link href={quizHref(prev)} className="-ms-2 grid size-11 place-items-center rounded-md" aria-label="Previous question">
@@ -163,7 +163,7 @@ function Results({ state }: { state: QuizState }) {
   ];
 
   return (
-    <main className="mx-auto max-w-md space-y-5 px-4 py-4">
+    <main id="main" className="mx-auto max-w-md space-y-5 px-4 py-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Your pick</h1>
         <Button asChild variant="ghost" className="h-11">

@@ -131,7 +131,9 @@ export function parseTimeRange(input: string | null | undefined): { opens: strin
   return opens && closes ? { opens, closes } : null;
 }
 
+const karachiDayFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" });
+
 /** Today's date in Asia/Karachi as YYYY-MM-DD. */
 export function karachiDate(at: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(at);
+  return karachiDayFmt.format(at);
 }

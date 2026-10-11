@@ -13,7 +13,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const next = safeReturnPath(sp.next);
   if ((await getActor()).kind === "user") redirect(next);
   return (
-    <main className="mx-auto max-w-sm space-y-5 px-4 py-10">
+    <main id="main" className="mx-auto max-w-sm space-y-5 px-4 py-10">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Sign in</h1>
         <p className="text-sm text-muted-foreground">

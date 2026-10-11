@@ -52,7 +52,7 @@ export function ProfileApp({
   const cardNames = (methods.data ?? []).filter((m) => cards.includes(m.id)).map((m) => m.name);
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-4 py-6">
+    <main id="main" className="mx-auto max-w-2xl space-y-6 px-4 py-6">
       <h1 className="text-2xl font-semibold">{t("nav.profile")}</h1>
 
       {/* Account */}

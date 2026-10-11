@@ -67,8 +67,10 @@ describe("staging a manual deal", () => {
     expect(row.proposed).toMatchObject({ place_id: placeId, payment_methods: ["HBL"], days_of_week: [1, 2], source_url: "https://www.hbl.com/offers" });
   });
 
-  test("collector-only sources can't be used for hand entry", async () => {
-    const d = form({ applies_to: `place:${placeId}`, source: "osm-overpass-lahore" }).data!;
-    expect(await stageManualDeal(db, "00000000-0000-4000-8000-0000000000aa", d, null)).toEqual({ error: "Choose a source you can enter deals from." });
+  test("collector-only and sample-data sources can't be used for hand entry", async () => {
+    for (const source of ["osm-overpass-lahore", "sample-data"]) {
+      const d = form({ applies_to: `place:${placeId}`, source }).data!;
+      expect(await stageManualDeal(db, "00000000-0000-4000-8000-0000000000aa", d, null)).toEqual({ error: "Choose a source you can enter deals from." });
+    }
   });
 });

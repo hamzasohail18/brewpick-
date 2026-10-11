@@ -12,10 +12,11 @@ export interface SnapshotStore {
 export function localSnapshotStore(dir = process.env.SNAPSHOT_DIR ?? ".data/snapshots"): SnapshotStore {
   return {
     async save(runId, name, body) {
-      const folder = join(dir, runId);
+      // A runtime data folder, not source: keep the bundler from tracing the whole project because of it.
+      const folder = join(/*turbopackIgnore: true*/ dir, runId);
       await mkdir(folder, { recursive: true });
       const safe = name.replace(/[^a-z0-9._-]/gi, "_");
-      await writeFile(join(folder, safe), body);
+      await writeFile(join(/*turbopackIgnore: true*/ folder, safe), body);
       return `snapshots/${runId}/${safe}`;
     },
   };

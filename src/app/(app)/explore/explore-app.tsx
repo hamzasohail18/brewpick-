@@ -29,8 +29,14 @@ import { formatPkr } from "@/lib/explore/format";
 import { CardsButton } from "@/components/app/cards-sheet";
 import { useCards } from "@/lib/deals/cards";
 import { effectivePrice } from "@/lib/deals/engine";
-import { FilterSheet, type FilterOptions } from "./filter-sheet";
+import { preloadOnFirstInteraction, useEverOpened } from "@/components/app/lazy";
+import type { FilterOptions } from "./filter-sheet";
 import { PlaceCard, PlaceCardSkeleton } from "./place-card";
+
+// The filter sheet loads on first open (or first tap anywhere), not with the list.
+const loadFilterSheet = () => import("./filter-sheet");
+const FilterSheet = dynamic(() => loadFilterSheet().then((m) => m.FilterSheet), { ssr: false });
+preloadOnFirstInteraction(loadFilterSheet);
 
 const PlacesMap = dynamic(() => import("@/components/app/places-map"), {
   ssr: false,
@@ -133,6 +139,7 @@ export function ExploreApp({
   }, [query.data, origin, now, cards, filters.openNow, filters.maxKm, sort]);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersEver = useEverOpened(filtersOpen);
   const [locationOpen, setLocationOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const filterCount = activeFilterCount(filters);
@@ -145,7 +152,7 @@ export function ExploreApp({
   const distanceFrom = origin ? (origin.kind === "gps" ? "you" : origin.name) : null;
 
   return (
-    <main className="mx-auto max-w-2xl">
+    <main id="main" className="mx-auto max-w-2xl">
       <div className="sticky top-0 z-30 space-y-3 border-b bg-background/95 px-4 pt-4 pb-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{t("explore.title")}</h1>
@@ -298,17 +305,19 @@ export function ExploreApp({
         )}
       </div>
 
-      <FilterSheet
-        open={filtersOpen}
-        onOpenChange={setFiltersOpen}
-        filters={filters}
-        update={update}
-        clearAll={clearAll}
-        options={options}
-        areas={areas}
-        resultCount={rows.length}
-        hasOrigin={!!origin}
-      />
+      {filtersEver && (
+        <FilterSheet
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          filters={filters}
+          update={update}
+          clearAll={clearAll}
+          options={options}
+          areas={areas}
+          resultCount={rows.length}
+          hasOrigin={!!origin}
+        />
+      )}
       <LocationSheet open={locationOpen} onOpenChange={setLocationOpen} areas={areas} />
     </main>
   );

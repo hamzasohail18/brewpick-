@@ -18,7 +18,7 @@ export default async function OwnerPage() {
   const places = await dbAs(actor, (tx) => ownedPlaces(tx, actor.userId));
 
   return (
-    <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
+    <main id="main" className="mx-auto max-w-2xl space-y-5 px-4 py-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Owner portal</h1>
         <p className="text-sm text-muted-foreground">

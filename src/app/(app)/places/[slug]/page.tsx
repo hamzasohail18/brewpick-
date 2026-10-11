@@ -61,7 +61,7 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
   };
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-4 pt-3 pb-8">
+    <main id="main" className="mx-auto max-w-2xl space-y-6 px-4 pt-3 pb-8">
       <Link href="/explore" className="-ms-2 inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft aria-hidden className="size-4" />
         {t("nav.explore")}
@@ -81,7 +81,7 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
                 <span className="inline-flex items-center gap-0.5">
                   · <Star aria-hidden className="size-3.5 fill-current text-warning" />
                   <span className="sr-only">Rating</span>
-                  {place.rating.toFixed(1)} <span className="opacity-80">({place.ratingCount} ratings)</span>
+                  {place.rating.toFixed(1)} <span className="font-normal">({place.ratingCount} ratings)</span>
                 </span>
               )}
             </p>

@@ -4,7 +4,7 @@
 // GPS coordinates stay in memory on this device. They are never stored or sent to the server.
 // Only the *choice* is remembered (area id, or "use GPS"), so returning visitors don't re-pick.
 
-import { useSyncExternalStore } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 
 export type Origin =
   | { kind: "gps"; lat: number; lng: number; accuracyM: number }
@@ -104,7 +104,14 @@ export function useOrigin(): OriginState {
   return useSyncExternalStore(subscribe, () => state, () => SERVER_STATE);
 }
 
-/** Current time, ticking each minute (for "open now"); null during server render to avoid mismatches. */
+/**
+ * The minute the server rendered at (minutes since epoch; 0 = unknown). The first client render uses it
+ * too, so "open now", deal status and the lists built on them match the server HTML instead of
+ * re-sorting and shifting the page right after load.
+ */
+export const ServerMinuteContext = createContext(0);
+
+/** Current time, ticking each minute (for "open now"); the server's minute until the page has hydrated. */
 let nowMinute = 0;
 const nowListeners = new Set<() => void>();
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -125,10 +132,11 @@ function subscribeNow(l: () => void) {
   };
 }
 export function useNow(): Date | null {
+  const serverMinute = useContext(ServerMinuteContext);
   const minute = useSyncExternalStore(
     subscribeNow,
     () => (nowMinute ||= Math.floor(Date.now() / 60_000)),
-    () => 0,
+    () => serverMinute,
   );
   return minute ? new Date(minute * 60_000) : null;
 }

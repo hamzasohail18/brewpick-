@@ -23,9 +23,11 @@ const toMin = (t: string) => {
 };
 
 /** Weekday (0 = Sunday) and minutes since midnight in Lahore. */
+// Built once: constructing a time-zone formatter is slow, and lists call this for every place.
+const clockFmt = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
 export function lahoreClock(at: Date): { dow: number; min: number } {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
-    .formatToParts(at);
+  const parts = clockFmt.formatToParts(at);
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
   const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(get("weekday"));
   return { dow, min: Number(get("hour")) * 60 + Number(get("minute")) };
