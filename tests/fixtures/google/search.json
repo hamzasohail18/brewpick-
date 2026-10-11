@@ -1,0 +1,35 @@
+{
+  "places": [
+    {
+      "id": "ChIJfixtureAAA",
+      "displayName": { "text": "Fixture Beanery", "languageCode": "en" },
+      "formattedAddress": "45 Fixture Road, Gulberg III, Lahore, Pakistan",
+      "location": { "latitude": 31.5121, "longitude": 74.3462 },
+      "nationalPhoneNumber": "0300 0000000",
+      "websiteUri": "https://fixture-beanery.example.com/",
+      "googleMapsUri": "https://maps.google.com/?cid=1",
+      "types": ["coffee_shop", "cafe", "food"],
+      "primaryType": "coffee_shop",
+      "businessStatus": "OPERATIONAL",
+      "regularOpeningHours": { "periods": [
+        { "open": { "day": 1, "hour": 9, "minute": 0 }, "close": { "day": 1, "hour": 23, "minute": 0 } },
+        { "open": { "day": 5, "hour": 14, "minute": 0 }, "close": { "day": 6, "hour": 1, "minute": 0 } },
+        { "open": { "day": 6, "hour": 10, "minute": 0 }, "close": { "day": 0, "hour": 0, "minute": 0 } }
+      ] }
+    },
+    {
+      "id": "ChIJfixtureBBB",
+      "displayName": { "text": "Fixture Bakehouse" },
+      "location": { "latitude": 31.47, "longitude": 74.273 },
+      "types": ["bakery", "cafe"],
+      "businessStatus": "OPERATIONAL",
+      "regularOpeningHours": { "periods": [ { "open": { "day": 0, "hour": 0, "minute": 0 } } ] }
+    },
+    {
+      "id": "ChIJfixtureCCC",
+      "displayName": { "text": "Fixture Closed Cafe" },
+      "location": { "latitude": 31.5, "longitude": 74.3 },
+      "businessStatus": "CLOSED_PERMANENTLY"
+    }
+  ]
+}

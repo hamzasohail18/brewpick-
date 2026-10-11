@@ -37,6 +37,8 @@ export interface FetchedPage {
   status: number;
   contentType: string | null;
   body: string;
+  /** Raw bytes, only when fetched with { binary: true } (menu PDFs and images); body is then "". */
+  bytes?: Uint8Array;
   fromCache: boolean;
 }
 
@@ -109,13 +111,14 @@ export function createPoliteFetch(policy: CollectorPolicy, deps: PoliteFetchDeps
     return rules;
   }
 
-  return async function politeFetch(url: string, init?: RequestInit): Promise<FetchedPage> {
+  return async function politeFetch(url: string, init?: RequestInit, opts: { binary?: boolean } = {}): Promise<FetchedPage> {
     const u = new URL(url);
     if (u.hostname !== baseHost && !u.hostname.endsWith(`.${baseHost}`)) throw new OffSourceUrlError(url, policy.baseUrl);
 
     const method = (init?.method ?? "GET").toUpperCase();
     const cacheable = policy.cacheAllowed && method === "GET";
-    const hit = cacheable ? cache.get(url) : undefined;
+    const cacheKey = `${opts.binary ? "bin:" : ""}${url}`;
+    const hit = cacheable ? cache.get(cacheKey) : undefined;
     if (hit) return { ...hit, fromCache: true };
 
     if (respectRobots && !isPathAllowed(await robots(u.origin), u.pathname + u.search)) throw new RobotsDisallowedError(url);
@@ -126,10 +129,10 @@ export function createPoliteFetch(policy: CollectorPolicy, deps: PoliteFetchDeps
       url,
       status: res.status,
       contentType: res.headers.get("content-type"),
-      body: await res.text(),
+      ...(opts.binary ? { body: "", bytes: new Uint8Array(await res.arrayBuffer()) } : { body: await res.text() }),
       fromCache: false,
     };
-    if (cacheable && res.ok) cache.set(url, page);
+    if (cacheable && res.ok) cache.set(cacheKey, page);
     return page;
   };
 }

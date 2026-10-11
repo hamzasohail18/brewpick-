@@ -1,0 +1,55 @@
+# Daily scheduler pass (Section 7.4): archives ended deals, runs collectors that are due (each source's
+# check_interval_days) and any runs queued from the admin. A failed collector fails the job, so GitHub
+# emails the repo owner; set ALERT_WEBHOOK_URL for a Slack-compatible message too.
+#
+# Needs repository secrets: DATABASE_URL (Supabase session pooler or direct connection) and
+# COLLECTOR_CONTACT_EMAIL. Optional: GOOGLE_PLACES_API_KEY, ALERT_WEBHOOK_URL.
+# Without DATABASE_URL the job only prints a notice.
+name: Scheduled collectors
+
+on:
+  schedule:
+    - cron: "0 22 * * *" # 03:00 Asia/Karachi
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      COLLECTOR_CONTACT_EMAIL: ${{ secrets.COLLECTOR_CONTACT_EMAIL }}
+      GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+      ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+      SNAPSHOT_DIR: snapshots
+    steps:
+      - name: Skip without a database
+        if: env.DATABASE_URL == ''
+        run: echo "::notice::DATABASE_URL secret not set; nothing to collect into."
+      - uses: actions/checkout@v4
+        if: env.DATABASE_URL != ''
+      - uses: actions/setup-node@v4
+        if: env.DATABASE_URL != ''
+        with:
+          node-version: 24
+          cache: npm
+      - if: env.DATABASE_URL != ''
+        run: npm ci
+      - name: Run scheduler
+        if: env.DATABASE_URL != ''
+        run: npm run scheduler
+      # Raw pages/files each run fetched, for audit (source_runs.raw_snapshot_url points into this).
+      - uses: actions/upload-artifact@v4
+        if: always() && env.DATABASE_URL != ''
+        with:
+          name: snapshots-${{ github.run_id }}
+          path: snapshots
+          if-no-files-found: ignore
+          retention-days: 90

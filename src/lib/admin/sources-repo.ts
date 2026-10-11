@@ -142,7 +142,7 @@ export async function saveSource(actor: UserActor, id: string | null, v: SourceF
   });
 }
 
-/** Queues a run. The executor (build step 12) picks queued runs up; the DB trigger re-checks the guard. */
+/** Queues a run for the scheduler (scripts/scheduler.ts) to start; the DB trigger re-checks the guard. */
 export async function queueRun(actor: UserActor, sourceId: string) {
   return dbAs(actor, async (tx) => {
     const [run] = await tx.query<{ id: string }>(

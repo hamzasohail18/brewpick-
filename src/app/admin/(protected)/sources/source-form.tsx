@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { nativeSelect } from "@/components/admin/native-select";
+import { CheckboxField, Field, Section } from "@/components/admin/form-field";
 import { AUTOMATION_LABELS, CONFIDENCE_LABELS, KIND_LABELS } from "@/lib/domain/labels";
 import { AUTOMATION_STATUSES, CONFIDENCE_LEVELS, SOURCE_KINDS } from "@/lib/domain/sources";
 import { cn } from "@/lib/utils";
@@ -142,71 +143,5 @@ export function SourceForm({ id, defaults }: { id: string | null; defaults: Sour
         </Button>
       </div>
     </form>
-  );
-}
-
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
-  return (
-    <fieldset className="space-y-4 rounded-lg border bg-card p-4">
-      <legend className="px-1 text-base font-semibold">{title}</legend>
-      {description && <p className="text-sm text-muted-foreground">{description}</p>}
-      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
-    </fieldset>
-  );
-}
-
-type FieldProps = {
-  id: string;
-  name: string;
-  className: string;
-  "aria-invalid"?: boolean;
-  "aria-describedby"?: string;
-};
-
-function Field({
-  name,
-  label,
-  hint,
-  error,
-  wide,
-  children,
-}: {
-  name: string;
-  label: string;
-  hint?: string;
-  error?: string[];
-  wide?: boolean;
-  children: (p: FieldProps) => React.ReactNode;
-}) {
-  const id = useId();
-  const hintId = `${id}-hint`;
-  const errId = `${id}-err`;
-  const describedBy = [hint && hintId, error && errId].filter(Boolean).join(" ") || undefined;
-  return (
-    <div className={cn("space-y-1.5", wide && "sm:col-span-2")}>
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      {children({ id, name, className: "h-11", "aria-invalid": error ? true : undefined, "aria-describedby": describedBy })}
-      {hint && (
-        <p id={hintId} className="text-xs text-muted-foreground">
-          {hint}
-        </p>
-      )}
-      {error && (
-        <p id={errId} className="text-xs font-medium text-destructive">
-          {error.join(" ")}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function CheckboxField({ name, label, defaultChecked }: { name: string; label: string; defaultChecked: boolean }) {
-  return (
-    <label className="flex min-h-11 items-center gap-3 self-end text-sm font-medium">
-      <input type="checkbox" name={name} defaultChecked={defaultChecked} className="size-5 accent-primary" />
-      {label}
-    </label>
   );
 }

@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 export interface SnapshotStore {
   /** Saves the body and returns a reference stored in source_runs.raw_snapshot_url. */
-  save(runId: string, name: string, body: string): Promise<string>;
+  save(runId: string, name: string, body: string | Uint8Array): Promise<string>;
 }
 
 export function localSnapshotStore(dir = process.env.SNAPSHOT_DIR ?? ".data/snapshots"): SnapshotStore {
@@ -15,14 +15,14 @@ export function localSnapshotStore(dir = process.env.SNAPSHOT_DIR ?? ".data/snap
       const folder = join(dir, runId);
       await mkdir(folder, { recursive: true });
       const safe = name.replace(/[^a-z0-9._-]/gi, "_");
-      await writeFile(join(folder, safe), body, "utf8");
+      await writeFile(join(folder, safe), body);
       return `snapshots/${runId}/${safe}`;
     },
   };
 }
 
-export const memorySnapshotStore = (): SnapshotStore & { saved: Map<string, string> } => {
-  const saved = new Map<string, string>();
+export const memorySnapshotStore = (): SnapshotStore & { saved: Map<string, string | Uint8Array> } => {
+  const saved = new Map<string, string | Uint8Array>();
   return {
     saved,
     async save(runId, name, body) {

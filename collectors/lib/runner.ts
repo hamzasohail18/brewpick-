@@ -41,6 +41,8 @@ export interface RunOptions {
   snapshots?: SnapshotStore;
   log?: (msg: string) => void;
   now?: Date;
+  /** Start this queued run (from "Run now" in queue mode) instead of creating a new one. */
+  queuedRunId?: string;
 }
 
 export async function loadSource(db: Db, slug: string): Promise<SourceRow> {
@@ -68,6 +70,14 @@ export async function runCollector(opts: RunOptions) {
         where source_id = $1 and status = 'running' and started_at < now() - interval '15 minutes'`,
       [source.id],
     );
+    if (opts.queuedRunId) {
+      const started = await tx.query<{ id: string }>(
+        "update source_runs set status = 'running', started_at = now() where id = $1 and source_id = $2 and status = 'queued' returning id",
+        [opts.queuedRunId, source.id],
+      );
+      if (!started.length) throw new Error(`Run ${opts.queuedRunId} is no longer queued.`);
+      return started;
+    }
     return tx.query<{ id: string }>("insert into source_runs (source_id, status) values ($1, 'running') returning id", [source.id]);
   });
   log(`run ${runId} started`);

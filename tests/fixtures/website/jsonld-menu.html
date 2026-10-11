@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head><title>Fixture Roastery menu</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CafeOrCoffeeShop",
+      "name": "Fixture Roastery",
+      "openingHoursSpecification": [
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "08:00", "closes": "23:00" },
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": ["https://schema.org/Saturday","https://schema.org/Sunday"], "opens": "10:00:00", "closes": "01:00:00" }
+      ],
+      "hasMenu": {
+        "@type": "Menu",
+        "hasMenuSection": [
+          {
+            "@type": "MenuSection",
+            "name": "Hot coffee",
+            "hasMenuItem": [
+              { "@type": "MenuItem", "name": "Cappuccino",
+                "offers": [
+                  { "@type": "Offer", "name": "Small", "price": "520", "priceCurrency": "PKR" },
+                  { "@type": "Offer", "name": "Large", "price": 690, "priceCurrency": "PKR" }
+                ] },
+              { "@type": "MenuItem", "name": "Americano 12 oz",
+                "nutrition": { "@type": "NutritionInformation", "calories": "15 calories" },
+                "offers": { "@type": "Offer", "price": "450.00", "priceCurrency": "PKR" } }
+            ]
+          },
+          {
+            "@type": "MenuSection",
+            "name": "Cold",
+            "hasMenuItem": [
+              { "@type": "MenuItem", "name": "Iced Spanish Latte",
+                "offers": { "@type": "Offer", "price": "780" } },
+              { "@type": "MenuItem", "name": "Imported Cold Brew Can",
+                "offers": { "@type": "Offer", "price": "4.50", "priceCurrency": "USD" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">{ not json </script>
+</head><body><h1>Menu</h1><p>Prices on this page are also in the structured data.</p></body></html>

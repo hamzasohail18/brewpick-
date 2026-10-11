@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { COLLECTORS, hasCollector } from "@collectors/registry";
+import { collectorFor } from "@collectors/registry";
 import { runCollector } from "@collectors/lib/runner";
 import { getDb } from "@/lib/db";
 import { getSource, queueRun, saveSource } from "@/lib/admin/sources-repo";
@@ -68,26 +68,31 @@ export async function runNowAction(_prev: RunState, formData: FormData): Promise
   const decision = checkSource(found.source, { contactEmail: process.env.COLLECTOR_CONTACT_EMAIL });
   if (!decision.allowed) return { message: "Blocked by the collector guard.", reasons: decision.reasons };
 
-  const collect = hasCollector(found.source.slug) ? COLLECTORS[found.source.slug] : undefined;
-  if (collect) {
-    // Run in-process once the response is sent; the run shows up in the history when it starts.
-    after(async () => {
-      const { db } = await getDb();
-      await runCollector({ db, slug: found.source.slug, collect }).catch((e) =>
-        console.error(`[collector ${found.source.slug}]`, e instanceof Error ? e.message : e),
-      );
-    });
-    revalidatePath(`/admin/sources/${id}`);
-    return { ok: true, message: "Collector started. Refresh in a minute to see the run and the review queue." };
+  const collect = collectorFor(found.source);
+  if (!collect) {
+    return { message: "There's no collector for this kind of source. Its data is entered by hand or used as a reference." };
   }
 
-  try {
-    await queueRun(admin, id);
-  } catch (e) {
-    if (pgErrorCode(e) === "23514") return { message: "Blocked by the database guard.", reasons: [(e as Error).message] };
-    throw e;
+  // On hosts that cut off work after the response (serverless), set COLLECTOR_EXECUTION=queue and let
+  // the scheduler (npm run scheduler) run it. Otherwise run in-process once the response is sent.
+  if (process.env.COLLECTOR_EXECUTION === "queue") {
+    try {
+      await queueRun(admin, id);
+    } catch (e) {
+      if (pgErrorCode(e) === "23514") return { message: "Blocked by the database guard.", reasons: [(e as Error).message] };
+      throw e;
+    }
+    revalidatePath(`/admin/sources/${id}`);
+    revalidatePath("/admin/sources");
+    return { ok: true, message: "Run queued. The scheduler starts it on its next pass." };
   }
+
+  after(async () => {
+    const { db } = await getDb();
+    await runCollector({ db, slug: found.source.slug, collect }).catch((e) =>
+      console.error(`[collector ${found.source.slug}]`, e instanceof Error ? e.message : e),
+    );
+  });
   revalidatePath(`/admin/sources/${id}`);
-  revalidatePath("/admin/sources");
-  return { ok: true, message: "Run queued. No collector is built for this source yet; the scheduler (step 12) will pick it up." };
+  return { ok: true, message: "Collector started. Refresh in a minute to see the run and the review queue." };
 }
