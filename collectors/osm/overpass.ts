@@ -68,6 +68,22 @@ function instagram(t: Record<string, string>): string | null {
   return (m ? m[1] : v.replace(/^@/, "")).trim() || null;
 }
 
+const LOCATION_WORDS = /\b(mall|branch|phase \d+|block [a-z0-9]+|sector [a-z0-9]+|plaza|market|road|boulevard)\b/i;
+
+/**
+ * "Tim Hortons - Bahria Town" -> name "Tim Hortons", branch "Bahria Town". Only splits when the
+ * suffix is clearly a location (known area, "... Mall", "Phase 5") or the prefix is the OSM brand;
+ * "Drip - Coffee Brewery & Bakery" is a tagline and stays whole.
+ */
+export function splitBranch(name: string, brand: string | undefined, areaNames: string[]): { name: string; branch: string | null } {
+  const m = name.match(/^(.+?)\s+[-–|]\s+(.+)$/);
+  if (!m) return { name, branch: null };
+  const [, head, tail] = m;
+  const isArea = areaNames.some((a) => tail.toLowerCase().includes(a.toLowerCase()));
+  const isBrand = brand !== undefined && head.trim().toLowerCase() === brand.trim().toLowerCase();
+  return isArea || isBrand || LOCATION_WORDS.test(tail) ? { name: head.trim(), branch: tail.trim() } : { name, branch: null };
+}
+
 /** Nearest area centroid within maxKm, else null (equirectangular distance is fine at city scale). */
 export function nearestArea(lat: number, lng: number, areas: Area[], maxKm = 4): number | null {
   let best: { id: number; km: number } | null = null;
@@ -113,10 +129,11 @@ export function mapOverpass(elements: OverpassElement[], areas: Area[], captured
       skipped.push({ osmId, reason: "marked disused" });
       continue;
     }
+    const split = t.branch ? { name: name.trim(), branch: t.branch.trim() } : splitBranch(name.trim(), t.brand, areas.map((a) => a.name));
     records.push({
       kind: "place",
-      name: name.trim(),
-      branch_name: t.branch?.trim() || null,
+      name: split.name,
+      branch_name: split.branch,
       type: placeType(t),
       area_id: nearestArea(lat, lng, areas),
       address: address(t),

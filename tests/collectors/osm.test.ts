@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 import { readFileSync } from "node:fs";
 import type { PGlite } from "@electric-sql/pglite";
 import { parseOpeningHours } from "@collectors/osm/opening-hours";
-import { buildOverpassQuery, mapOverpass, nearestArea, type Area } from "@collectors/osm/overpass";
+import { buildOverpassQuery, mapOverpass, nearestArea, splitBranch, type Area } from "@collectors/osm/overpass";
 import { collectOsmPlaces } from "@collectors/osm";
 import { runCollector } from "@collectors/lib/runner";
 import { memorySnapshotStore } from "@collectors/lib/snapshots";
@@ -70,6 +70,15 @@ describe("OSM mapping", () => {
     expect(lab.hours).toHaveLength(7);
     expect(chain).toMatchObject({ type: "chain", branch_name: "Johar Town", area_id: 2, lat: 31.4701 });
     expect(drive).toMatchObject({ type: "kiosk_drive_thru", has_drive_thru: true, area_id: 3, hours: null });
+  });
+
+  test("branch names are split only when the suffix is clearly a location or the prefix is the brand", () => {
+    const areas = ["Bahria Town", "Gulberg"];
+    expect(splitBranch("Tim Hortons - Bahria Town", undefined, areas)).toEqual({ name: "Tim Hortons", branch: "Bahria Town" });
+    expect(splitBranch("Second Cup - Emporium Mall", undefined, areas)).toEqual({ name: "Second Cup", branch: "Emporium Mall" });
+    expect(splitBranch("Fixture Co | Riverside", "Fixture Co", areas)).toEqual({ name: "Fixture Co", branch: "Riverside" });
+    expect(splitBranch("Drip - Coffee Brewery & Bakery", undefined, areas)).toEqual({ name: "Drip - Coffee Brewery & Bakery", branch: null });
+    expect(splitBranch("Plain Name", undefined, areas)).toEqual({ name: "Plain Name", branch: null });
   });
 
   test("nearest area respects the distance limit", () => {

@@ -47,6 +47,8 @@ export interface PoliteFetchDeps {
   maxRetries?: number;
   /** Set false only for official APIs whose terms replace robots.txt (e.g. Overpass, Google Places). */
   respectRobots?: boolean;
+  /** Per-request limit; a hung server fails the attempt instead of the run hanging forever. */
+  timeoutMs?: number;
 }
 
 const RETRYABLE = new Set([408, 425, 429, 500, 502, 503, 504]);
@@ -57,6 +59,7 @@ export function createPoliteFetch(policy: CollectorPolicy, deps: PoliteFetchDeps
   const now = deps.now ?? Date.now;
   const maxRetries = deps.maxRetries ?? 3;
   const respectRobots = deps.respectRobots ?? true;
+  const timeoutMs = deps.timeoutMs ?? 120_000;
 
   const baseHost = new URL(policy.baseUrl).hostname;
   let lastRequestAt = -Infinity;
@@ -75,7 +78,13 @@ export function createPoliteFetch(policy: CollectorPolicy, deps: PoliteFetchDeps
       await waitTurn();
       let res: Response | null = null;
       try {
-        res = await fetchImpl(url, { ...init, headers: { ...(init?.headers ?? {}), "User-Agent": policy.userAgent } });
+        res = await fetchImpl(url, {
+          ...init,
+          headers: { ...(init?.headers ?? {}), "User-Agent": policy.userAgent },
+          signal: AbortSignal.timeout(timeoutMs),
+          // Inside Next.js, global fetch is patched for caching; collectors must always hit the network.
+          cache: "no-store",
+        });
       } catch (err) {
         if (attempt >= maxRetries) throw err;
       }

@@ -60,9 +60,16 @@ export async function runCollector(opts: RunOptions) {
     contactEmail: opts.contactEmail ?? process.env.COLLECTOR_CONTACT_EMAIL ?? null,
   });
 
-  const [{ id: runId }] = await withActor(opts.db, SERVICE, (tx) =>
-    tx.query<{ id: string }>("insert into source_runs (source_id, status) values ($1, 'running') returning id", [source.id]),
-  );
+  const [{ id: runId }] = await withActor(opts.db, SERVICE, async (tx) => {
+    // A run still "running" after 15 minutes died with its process (restart, crash); close it out.
+    await tx.query(
+      `update source_runs set status = 'failed', finished_at = now(),
+              error_message = 'Abandoned: no result after 15 minutes (process stopped?)'
+        where source_id = $1 and status = 'running' and started_at < now() - interval '15 minutes'`,
+      [source.id],
+    );
+    return tx.query<{ id: string }>("insert into source_runs (source_id, status) values ($1, 'running') returning id", [source.id]);
+  });
   log(`run ${runId} started`);
 
   const finish = (sql: string, params: unknown[]) =>
