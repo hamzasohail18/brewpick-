@@ -21,6 +21,7 @@ import { safeHttp, safeImage } from "@/lib/explore/links";
 import { toRule } from "@/lib/deals/repo";
 import type { DealRule } from "@/lib/deals/engine";
 import { DealCard } from "@/components/app/deal-card";
+import { FavoriteButton, RecordView } from "@/components/app/favorite-button";
 import { CardsButton } from "@/components/app/cards-sheet";
 import { PriceAfterDeals } from "@/components/app/price-after-deals";
 import { LiveStatus, MiniMap } from "./live-status";
@@ -50,6 +51,14 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
   ].filter(Boolean) as string[];
   const houseBeans = place.beans.filter((b) => !b.menuItemId);
   const rules = place.deals.map(toRule);
+  const favEntry = {
+    placeId: place.id,
+    slug: place.slug,
+    name: place.name,
+    branchName: place.branchName,
+    areaName: place.areaName,
+    isSample: place.isSample,
+  };
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 pt-3 pb-8">
@@ -85,7 +94,9 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
             This is a <strong>fictional sample place</strong> used while the app is being built. Its name, prices, calories and deals are made up.
           </p>
         )}
+        <RecordView place={favEntry} />
         <div className="flex flex-wrap gap-2">
+          <FavoriteButton place={favEntry} />
           <Button asChild className="h-11">
             <a href={`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`} target="_blank" rel="noopener noreferrer">
               <Navigation aria-hidden />

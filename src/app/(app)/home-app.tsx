@@ -16,6 +16,8 @@ import { useNow, useOrigin } from "@/lib/explore/origin";
 import type { PlaceSummary } from "@/lib/explore/repo";
 import { distanceM } from "@/lib/explore/travel";
 import { BUDGETS, quizHref } from "@/lib/scoring/quiz";
+import { useUsualBudget } from "@/lib/profile/client";
+import { cn } from "@/lib/utils";
 import { PlaceCard } from "./explore/place-card";
 
 export function HomeApp({ places, deals, areas }: { places: PlaceSummary[]; deals: DealView[]; areas: AreaOption[] }) {
@@ -25,6 +27,7 @@ export function HomeApp({ places, deals, areas }: { places: PlaceSummary[]; deal
   const now = useNow();
   const cards = useCards();
   const [locationOpen, setLocationOpen] = useState(false);
+  const usualBudget = useUsualBudget();
 
   // Nearby top 3: the closest places open now (top rated when we don't know where you are).
   const nearby = useMemo(() => {
@@ -76,9 +79,13 @@ export function HomeApp({ places, deals, areas }: { places: PlaceSummary[]; deal
               <li key={b.value}>
                 <Link
                   href={quizHref({ budgetMax: b.value === "any" ? null : Number(b.value) })}
-                  className="flex min-h-14 items-center justify-center rounded-xl bg-background px-3 text-center text-base font-semibold text-foreground transition-colors hover:bg-background/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className={cn(
+                    "flex min-h-14 flex-col items-center justify-center rounded-xl bg-background px-3 text-center text-base font-semibold text-foreground transition-colors hover:bg-background/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                    usualBudget !== null && String(usualBudget) === b.value && "ring-4 ring-background/50",
+                  )}
                 >
                   {b.label}
+                  {usualBudget !== null && String(usualBudget) === b.value && <span className="text-xs font-normal text-muted-foreground">Your usual</span>}
                 </Link>
               </li>
             ))}

@@ -200,6 +200,22 @@ Heuristics, stated so they can be argued with:
 
 **Home** also shows the three closest places open now (top rated if no location is set) and today's best deals you can use.
 
+### Profile, favourites and saved cards
+
+Everything works without an account. Favourites, recently viewed places, saved cards, the home area, the usual budget and compare picks live in this browser (`bp.*` keys in localStorage). Profile has a button to clear them; clearing never touches the account.
+
+Signing in is optional (`/login`):
+- With Supabase configured, sign-in is by **emailed link** (no password); `/auth/callback` swaps the link's code for a session.
+- Locally without Supabase, a dev-only "Continue as dev user" button is shown. It's disabled in production.
+- After sign-in, `/` loads `/api/me` once per visit and merges: favourites on the phone go up to the account (`favorites`), and the account's come down.
+- **Saved cards stay on the phone by default** (Section 3G). Ticking "Also keep my cards on my account" copies them to `user_payment_methods` and keeps them in step; unticking removes them from the account.
+- The account's email and profile are held in memory only, never in browser storage.
+- Return paths after sign-in are limited to same-site, non-admin paths.
+
+`/api/me`, `/api/me/favorites` and `/api/me/cards` run as the signed-in user, so RLS limits every read and write to that user's own rows (tested: another user sees and changes nothing). Writes need a JSON body and a same-origin `Origin` header.
+
+Language: the setting is in place but Urdu is marked "coming soon". The message catalogue and RTL plumbing exist; the translation isn't done yet.
+
 **Map tiles:** the map uses Leaflet with OpenStreetMap's standard tile server by default. That's fine for development and light use, but the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/) doesn't allow heavy traffic. Before launch, set `NEXT_PUBLIC_MAP_TILE_URL` (and `NEXT_PUBLIC_MAP_ATTRIBUTION`) to a tile provider with a suitable plan, or self-host tiles.
 
 ## Sample data

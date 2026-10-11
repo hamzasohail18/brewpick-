@@ -53,6 +53,7 @@ brewpick-lahore/
 │  │  ├─ admin/            admin data access (source registry, ...)
 │  │  ├─ supabase/         browser / server / service-role clients
 │  │  ├─ domain/           types + Zod schemas shared by app, scripts and collectors
+│  │  ├─ profile/          own-rows repo (profile, favourites, account cards) + phone-side stores and account sync
 │  │  ├─ scoring/          "Pick for me": engine (filters, factors, weights, reasons), quiz state, candidates query
 │  │  ├─ compare/          compare query, URL selection, best-value rule, tray (localStorage)
 │  │  ├─ deals/            effective-price engine (TS mirror of SQL), live deals loader, saved cards store

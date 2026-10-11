@@ -1,3 +1,4 @@
+import { AccountSync } from "@/components/app/account-sync";
 import { BottomNav } from "@/components/app/bottom-nav";
 import { CompareTray } from "@/components/app/compare-tray";
 import { Providers } from "@/components/app/providers";
@@ -6,6 +7,7 @@ import { Providers } from "@/components/app/providers";
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <Providers>
+      <AccountSync />
       {children}
       <CompareTray />
       <BottomNav />

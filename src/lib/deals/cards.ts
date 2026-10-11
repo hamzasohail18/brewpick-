@@ -22,7 +22,14 @@ function load() {
   }
 }
 
-function commit(next: number[]) {
+/** Called after every change the user makes (account sync listens here). */
+const changeHooks = new Set<(ids: number[]) => void>();
+export function onCardsChanged(fn: (ids: number[]) => void) {
+  changeHooks.add(fn);
+  return () => changeHooks.delete(fn);
+}
+
+function commit(next: number[], fromUser = true) {
   cards = [...new Set(next)].sort((a, b) => a - b);
   try {
     localStorage.setItem(KEY, JSON.stringify(cards));
@@ -30,7 +37,20 @@ function commit(next: number[]) {
     // works for this visit only
   }
   listeners.forEach((l) => l());
+  if (fromUser) changeHooks.forEach((fn) => fn(cards));
 }
+
+/** Current saved cards, outside React. */
+export function currentCards(): number[] {
+  load();
+  return cards;
+}
+
+/** Replace from the account without echoing the change back to it. */
+export const setCardsFromAccount = (ids: number[]) => {
+  load();
+  commit(ids, false);
+};
 
 export function toggleCard(id: number) {
   load();
