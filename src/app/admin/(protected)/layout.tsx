@@ -32,6 +32,9 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
             <Link href="/admin/import" className="flex min-h-11 items-center rounded-md px-3 hover:bg-accent">
               Import
             </Link>
+            <Link href="/capture" className="flex min-h-11 items-center rounded-md px-3 whitespace-nowrap hover:bg-accent">
+              Capture
+            </Link>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm text-muted-foreground">
             <span className="hidden sm:inline">

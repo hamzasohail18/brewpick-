@@ -38,11 +38,14 @@ export interface NormalizedSize {
   volume_is_assumed: boolean;
 }
 
-const SIZE_WORDS: [RegExp, "small" | "medium" | "large", string][] = [
-  [/^(s|sm|small|short|tall|single)$/, "small", "Small"],
-  [/^(m|md|med|medium|regular|reg|grande)$/, "medium", "Regular"],
-  [/^(l|lg|large|venti|double|big)$/, "large", "Large"],
+/** Size words -> which default volume applies when the source states none. */
+const SIZE_BUCKETS: [RegExp, "small" | "medium" | "large"][] = [
+  [/^(s|sm|small|short|tall|single)$/, "small"],
+  [/^(m|md|med|medium|regular|reg|grande)$/, "medium"],
+  [/^(l|lg|large|venti|double|big)$/, "large"],
 ];
+/** Only bare abbreviations are expanded; real words ("Single", "Medium", "Grande") are kept as the menu writes them. */
+const ABBREVIATIONS: Record<string, string> = { s: "Small", sm: "Small", m: "Medium", md: "Medium", med: "Medium", reg: "Regular", l: "Large", lg: "Large" };
 
 /**
  * "12 oz" -> 355 ml (stated). "350ml" -> 350 (stated). "L" -> Large, 470 ml (assumed).
@@ -52,10 +55,11 @@ export function parseSize(label: string | null | undefined, statedVolume?: strin
   const raw = (label ?? "").trim();
   const volume = parseVolume(statedVolume) ?? parseVolume(raw);
   const word = normName(raw.replace(/\d+(\.\d+)?\s*(ml|oz|fl oz)\b/gi, ""));
-  const match = SIZE_WORDS.find(([re]) => re.test(word));
-  const size_label = match ? match[2] : raw ? titleCase(raw) : "Regular";
+  const bucketMatch = SIZE_BUCKETS.find(([re]) => re.test(word));
+  // "Regular 350ml" -> "Regular"; a label that is only a volume ("12 oz") stays as written.
+  const size_label = ABBREVIATIONS[word] ?? (word ? titleCase(word) : raw ? titleCase(raw) : "Regular");
   if (volume) return { size_label, volume_ml: volume, volume_is_assumed: false };
-  const bucket = match?.[1] ?? (raw ? null : "medium");
+  const bucket = bucketMatch?.[1] ?? (raw ? null : "medium");
   return bucket
     ? { size_label, volume_ml: DEFAULT_VOLUMES_ML[bucket], volume_is_assumed: true }
     : { size_label, volume_ml: null, volume_is_assumed: false };

@@ -12,7 +12,7 @@ export interface Db {
 /** Who is acting. Decides which Postgres role (and therefore which RLS policies) a query runs under. */
 export type Actor =
   | { kind: "anon" }
-  | { kind: "user"; userId: string; isAdmin: boolean; email?: string | null }
+  | { kind: "user"; userId: string; isAdmin: boolean; email?: string | null; /** app_metadata.role, e.g. "volunteer" */ role?: string | null }
   /** Server-side jobs (collectors, publisher). Bypasses RLS: never derive this from a request. */
   | { kind: "service" };
 

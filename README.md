@@ -42,6 +42,9 @@ npm run typecheck
 | `SUPABASE_SERVICE_ROLE_KEY` | server only | Reserved for jobs that must bypass RLS |
 | `COLLECTOR_CONTACT_EMAIL` | collectors | Contact in the User-Agent; collectors refuse to run without it |
 | `SNAPSHOT_DIR` | collectors | Where raw collector responses are kept (default `.data/snapshots`) |
+| `UPLOAD_DIR` | server | Where proof photos are stored (default `.data/uploads`) |
+| `APP_URL` | server | Public origin used in stored proof-photo links (e.g. `https://brewpick.pk`) |
+| `CAPTURE_MAX_DISTANCE_M` | server | How close to a place a Menu Capture must be made (default 200) |
 | `GOOGLE_PLACES_API_KEY`, `USDA_FDC_API_KEY` | collectors | Optional; only used once the source is reviewed |
 
 Admins are users whose Supabase `app_metadata.role` is `admin` (set from the dashboard or with the service key).
@@ -119,6 +122,32 @@ To run it, an admin first reviews the source in `/admin/sources` (Overpass usage
 and `COLLECTOR_CONTACT_EMAIL` must be set. Then use **Run now**, or `npm run collect -- osm-overpass-lahore`
 against a hosted database. New places land in the review queue; later runs re-confirm unchanged places
 automatically.
+
+## Menu Capture (in-store prices)
+
+`/capture` is a phone page for volunteers and admins (users whose `app_metadata.role` is `volunteer`
+or `admin`; in local dev use "Continue as dev volunteer"):
+
+1. **Where are you?** "Use my location" sorts places by distance and checks you're within
+   `CAPTURE_MAX_DISTANCE_M` (default 200 m; reported GPS accuracy, up to 100 m, counts in your favour).
+   Further away is refused. No location at all is allowed but flagged `geotag_missing` for the reviewer.
+2. **Photograph the menu** (up to 6 photos). Photos are resized on the phone and re-encoded, which drops
+   EXIF (GPS, device); the server strips any remaining EXIF before saving.
+3. **Check the prices.** Rows are prefilled from the current menu: change what's different, delete
+   what's gone, add what's new. Ticking "whole coffee menu" proposes removal of drinks not listed.
+4. **Submit.** Changed prices go to the review queue as `field-capture` records (verified once approved),
+   with the photo as evidence. Unchanged prices are re-confirmed straight away.
+
+With no signal, captures wait in the phone's outbox (IndexedDB) and upload when the connection is back.
+The capture id comes from the phone, so a retry can't create duplicates. We store the distance to the
+café, never the volunteer's coordinates.
+
+Photos are stored in `.data/uploads` (`UPLOAD_DIR`) and served at `/uploads/...`. Set `APP_URL` in
+production so stored proof links use the public domain.
+
+Phones only share their location with HTTPS sites. Over plain-HTTP Wi-Fi (http://<your-mac>:3000) the
+location check reports "missing" and captures are flagged; use a deployed HTTPS preview, or
+`next dev --experimental-https`, to test it on a real phone.
 
 ## Sample data
 

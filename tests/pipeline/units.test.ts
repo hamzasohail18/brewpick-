@@ -31,6 +31,11 @@ describe("normalizer", () => {
     expect(parseSize("small")).toEqual({ size_label: "Small", volume_ml: 240, volume_is_assumed: true });
     expect(parseSize("")).toEqual({ size_label: "Regular", volume_ml: 350, volume_is_assumed: true });
     expect(parseSize("Mug")).toEqual({ size_label: "Mug", volume_ml: null, volume_is_assumed: false });
+    // Menu words are kept (so they match the place's existing sizes); only abbreviations expand.
+    expect(parseSize("Single")).toEqual({ size_label: "Single", volume_ml: 240, volume_is_assumed: true });
+    expect(parseSize("double")).toMatchObject({ size_label: "Double" });
+    expect(parseSize("Med")).toMatchObject({ size_label: "Medium", volume_ml: 350 });
+    expect(parseSize("Grande")).toMatchObject({ size_label: "Grande", volume_ml: 350, volume_is_assumed: true });
   });
 
   const types = [

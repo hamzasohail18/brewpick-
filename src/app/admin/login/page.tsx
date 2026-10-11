@@ -10,8 +10,9 @@ export const metadata: Metadata = { title: "Admin sign-in · BrewPick Lahore" };
 
 export default async function AdminLoginPage({ searchParams }: PageProps<"/admin/login">) {
   const sp = await searchParams;
-  const next = typeof sp.next === "string" ? sp.next : "/admin/sources";
+  const next = typeof sp.next === "string" ? sp.next : "";
   const notAdmin = sp.error === "not_admin";
+  const notVolunteer = sp.error === "not_volunteer";
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-4 py-10">
@@ -20,12 +21,14 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
           <CardTitle>
             <h1 className="text-xl">BrewPick admin</h1>
           </CardTitle>
-          <CardDescription>Sources, review queue and data tools.</CardDescription>
+          <CardDescription>Review queue, sources, data tools and Menu Capture.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {notAdmin && (
+          {(notAdmin || notVolunteer) && (
             <Alert variant="destructive">
-              <AlertDescription>This account isn&apos;t an admin.</AlertDescription>
+              <AlertDescription>
+                {notAdmin ? "This account isn't an admin." : "Menu Capture is for volunteers and admins."}
+              </AlertDescription>
             </Alert>
           )}
           {supabaseConfigured() ? (
@@ -38,6 +41,9 @@ export default async function AdminLoginPage({ searchParams }: PageProps<"/admin
               </p>
               <Button type="submit" name="as" value="admin" className="h-11 w-full">
                 Continue as dev admin
+              </Button>
+              <Button type="submit" name="as" value="volunteer" variant="secondary" className="h-11 w-full">
+                Continue as dev volunteer (Menu Capture only)
               </Button>
               <Button type="submit" name="as" value="user" variant="outline" className="h-11 w-full">
                 Continue as dev user (no admin rights)

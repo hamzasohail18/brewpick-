@@ -5,16 +5,17 @@ import { redirect } from "next/navigation";
 import { DEV_COOKIE, devAuthEnabled, supabaseConfigured } from "@/lib/auth/session";
 
 /** Only paths inside the admin area, so `next` can't be used as an open redirect. */
-function safeNext(v: FormDataEntryValue | null) {
+function safeNext(v: FormDataEntryValue | null, fallback = "/admin/review") {
   const s = typeof v === "string" ? v : "";
-  return s.startsWith("/admin/") && !s.startsWith("//") ? s : "/admin/sources";
+  return (s.startsWith("/admin/") || s === "/capture" || s.startsWith("/capture/")) && !s.startsWith("//") ? s : fallback;
 }
 
 export async function devSignIn(formData: FormData) {
   if (!devAuthEnabled()) throw new Error("Dev sign-in is disabled");
-  const as = formData.get("as") === "user" ? "user" : "admin";
+  const raw = formData.get("as");
+  const as = raw === "user" || raw === "volunteer" ? raw : "admin";
   (await cookies()).set(DEV_COOKIE, as, { httpOnly: true, sameSite: "lax", path: "/" });
-  redirect(safeNext(formData.get("next")));
+  redirect(safeNext(formData.get("next"), as === "volunteer" ? "/capture" : "/admin/review"));
 }
 
 export type SignInState = { error?: string };

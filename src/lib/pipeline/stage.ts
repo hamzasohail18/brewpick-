@@ -21,6 +21,10 @@ export interface StageOptions {
   completeMenus?: { place_id: string; channel: "dine_in" | "takeaway" | "delivery" }[];
   /** Who auto-approves re-confirmations. */
   actor?: Reviewer;
+  /** Added to every record that goes to review (e.g. "geotag_missing" for a field capture). */
+  extraFlags?: string[];
+  /** Notes for the reviewer, shown on every record from this batch. */
+  extraMessages?: string[];
   today?: string;
 }
 
@@ -143,8 +147,8 @@ export async function stageRecords(db: Db, opts: StageOptions): Promise<StageSum
         proposed: r,
         current: match.current,
         diff: d.diff,
-        flags: [...v.flags, ...d.flags] as (Flag | DiffFlag)[],
-        messages: v.warnings,
+        flags: [...v.flags, ...d.flags, ...(opts.extraFlags ?? [])] as (Flag | DiffFlag)[],
+        messages: [...v.warnings, ...(opts.extraMessages ?? [])],
         evidence_url: evidence,
         status: "pending_review",
         match_key: match.matchKey,
@@ -165,8 +169,8 @@ export async function stageRecords(db: Db, opts: StageOptions): Promise<StageSum
           proposed: { kind: "item_price_removal", place_id: menu.place_id, display_name: live.display_name, size_label: live.size_label, channel: menu.channel },
           current: { price_pkr: live.price_pkr, display_name: live.display_name, size_label: live.size_label },
           diff: null,
-          flags: ["removed_item"],
-          messages: [`"${live.display_name}" (${live.size_label}) is no longer on the source's menu.`],
+          flags: ["removed_item", ...(opts.extraFlags ?? [])],
+          messages: [`"${live.display_name}" (${live.size_label}) is no longer on the source's menu.`, ...(opts.extraMessages ?? [])],
           evidence_url: opts.evidenceUrl ?? null,
           status: "pending_review",
           match_key: key,

@@ -67,6 +67,7 @@ export const FLAG_LABELS: Record<string, { label: string; tone: "warn" | "bad" |
   new_place: { label: "New place", tone: "neutral" },
   validation_error: { label: "Failed validation", tone: "bad" },
   ocr_low_confidence: { label: "OCR unsure", tone: "warn" },
+  geotag_missing: { label: "No location", tone: "warn" },
 };
 
 export const ACTION_LABELS = { create: "New", update: "Change", delete: "Removal", reconfirm: "Re-confirm" } as const;

@@ -14,8 +14,9 @@ export const devAuthEnabled = () => !supabaseConfigured() && process.env.NODE_EN
 
 export const DEV_COOKIE = "bp_dev_user";
 export const DEV_USERS = {
-  admin: { userId: "00000000-0000-4000-8000-00000000ad01", isAdmin: true, email: "dev-admin@localhost" },
-  user: { userId: "00000000-0000-4000-8000-00000000a5e1", isAdmin: false, email: "dev-user@localhost" },
+  admin: { userId: "00000000-0000-4000-8000-00000000ad01", isAdmin: true, email: "dev-admin@localhost", role: "admin" },
+  volunteer: { userId: "00000000-0000-4000-8000-0000000000f1", isAdmin: false, email: "dev-volunteer@localhost", role: "volunteer" },
+  user: { userId: "00000000-0000-4000-8000-00000000a5e1", isAdmin: false, email: "dev-user@localhost", role: null },
 } as const;
 export type DevUserKey = keyof typeof DEV_USERS;
 
@@ -32,11 +33,12 @@ export async function getActor(): Promise<Actor> {
       userId: data.user.id,
       email: data.user.email ?? null,
       isAdmin: data.user.app_metadata?.role === "admin",
+      role: (data.user.app_metadata?.role as string | undefined) ?? null,
     };
   }
   if (devAuthEnabled()) {
     const key = (await cookies()).get(DEV_COOKIE)?.value;
-    if (key === "admin" || key === "user") return { kind: "user", ...DEV_USERS[key] };
+    if (key && key in DEV_USERS) return { kind: "user", ...DEV_USERS[key as DevUserKey] };
   }
   return { kind: "anon" };
 }
@@ -48,3 +50,13 @@ export async function requireAdmin(next = "/admin/sources"): Promise<UserActor> 
   if (!actor.isAdmin) redirect("/admin/login?error=not_admin");
   return actor;
 }
+
+/** Menu Capture is for admins and volunteers (app_metadata.role = "volunteer"). */
+export async function requireCapturer(next = "/capture"): Promise<UserActor> {
+  const actor = await getActor();
+  if (actor.kind !== "user") redirect(`/admin/login?next=${encodeURIComponent(next)}`);
+  if (!actor.isAdmin && actor.role !== "volunteer") redirect("/admin/login?error=not_volunteer");
+  return actor;
+}
+
+export const canCapture = (a: Actor) => a.kind === "user" && (a.isAdmin || a.role === "volunteer");

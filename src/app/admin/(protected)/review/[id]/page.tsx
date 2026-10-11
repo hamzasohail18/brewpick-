@@ -90,7 +90,7 @@ export default async function ReviewItemPage({ params, searchParams }: PageProps
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section aria-labelledby="evidence" className="space-y-3">
+        <section aria-labelledby="evidence" className="min-w-0 space-y-3">
           <h2 id="evidence" className="text-lg font-semibold">
             Evidence
           </h2>
@@ -141,7 +141,7 @@ export default async function ReviewItemPage({ params, searchParams }: PageProps
           </dl>
         </section>
 
-        <section aria-labelledby="values" className="space-y-3">
+        <section aria-labelledby="values" className="min-w-0 space-y-3">
           <h2 id="values" className="text-lg font-semibold">
             Values
           </h2>
