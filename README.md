@@ -182,6 +182,24 @@ Picks collect in a tray (kept in this browser only) from the Explore cards and t
 
 Assumptions: BOGO counts as 50% off each cup. "Free item" deals don't reduce the drink's price. Minimum spend is checked against a single cup. Percentage discounts round half away from zero, as Postgres does.
 
+### Pick for me (decision engine)
+
+Home asks the first question (budget) right on the screen, so a recommendation is **4 taps** from opening the app: budget → goal (cheapest, healthiest, strongest, best beans, best deal) → style (hot or iced, with or without milk) → distance. Answers live in the URL (`/pick?b=800&g=cheapest&s=hot-milk&d=3`), so Back works and a chip on the result changes one answer. The server only gets the style and budget (`/api/pick`). Ranking runs on the phone in `src/lib/scoring/engine.ts`, because it needs the user's location and saved cards.
+
+How a pick is made:
+1. **Hard filters:** drink style (unknown milk isn't guessed), budget against the **price after deals**, distance limit, and closed places left out. A price without a source is never ranked (Section 9).
+2. **Eight factors**, each scaled 0–1 across the drinks still in play: price after deals, menu price, calories, caffeine, bean quality, distance, rating, deal value.
+3. **Weights by goal** (`WEIGHTS` in the engine, shown in "Why this pick?"). For example, "cheapest" puts 45% on price after deals, 15% on distance and 10% each on menu price, deal and rating.
+4. **Missing data is never zero.** A factor with no data for a drink is left out of its average, and the score drops by half that factor's weight (`MISSING_PENALTY`). The card says so, e.g. "No calories data: scored lower". A factor nobody has data for (distance with no location) is dropped and the weights rescaled. Nutrition or beans without a source count as missing.
+5. **Best drink per place, then the top three places**, so the alternates are real alternatives. Each pick gets a one-line reason: the top pick by your goal, and alternates by their trade-off against it ("Rs 60 more, 80 fewer kcal, 2.0 km further").
+
+Heuristics, stated so they can be argued with:
+- Bean quality = 60% Arabica share + 30% single origin (blend 0.4) + 10% origin stated.
+- Ratings are pulled towards 4.0 with a weight of 20 votes.
+- The server sends drinks up to 2× the budget, since a deal can take up to half off.
+
+**Home** also shows the three closest places open now (top rated if no location is set) and today's best deals you can use.
+
 **Map tiles:** the map uses Leaflet with OpenStreetMap's standard tile server by default. That's fine for development and light use, but the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/) doesn't allow heavy traffic. Before launch, set `NEXT_PUBLIC_MAP_TILE_URL` (and `NEXT_PUBLIC_MAP_ATTRIBUTION`) to a tile provider with a suitable plan, or self-host tiles.
 
 ## Sample data
