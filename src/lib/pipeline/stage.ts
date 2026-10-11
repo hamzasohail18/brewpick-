@@ -25,6 +25,10 @@ export interface StageOptions {
   extraFlags?: string[];
   /** Notes for the reviewer, shown on every record from this batch. */
   extraMessages?: string[];
+  /** The community/owner submission these records came from (its status follows their review). */
+  submissionId?: string | null;
+  /** Only for a verified owner confirming their own menu: the account is the evidence. */
+  evidenceOptional?: boolean;
   today?: string;
 }
 
@@ -57,9 +61,9 @@ export async function stageRecords(db: Db, opts: StageOptions): Promise<StageSum
     }) =>
       tx.query(
         `insert into staging_records (source_run_id, source_id, target_table, target_id, action, proposed, current, diff,
-                                      flags, messages, evidence_url, status, match_key, review_note, reviewed_at)
+                                      flags, messages, evidence_url, status, match_key, review_note, reviewed_at, submission_id)
          values ($1, $2, $3, $4, $5::staging_action, $6, $7, $8, $9, $10, $11, $12::record_status, $13, $14,
-                 case when $12::record_status = 'pending_review' then null else now() end)`,
+                 case when $12::record_status = 'pending_review' then null else now() end, $15)`,
         [
           opts.runId ?? null,
           opts.sourceId,
@@ -75,13 +79,14 @@ export async function stageRecords(db: Db, opts: StageOptions): Promise<StageSum
           row.status,
           row.match_key,
           row.review_note ?? null,
+          opts.submissionId ?? null,
         ],
       );
 
     const seenPriceKeys = new Set<string>();
 
     for (const input of opts.records) {
-      const v = validateRecord(input, { today: opts.today });
+      const v = validateRecord(input, { today: opts.today, evidenceOptional: opts.evidenceOptional });
       const kind = (input as { kind?: string })?.kind;
       const evidence = v.record?.proof_image_url ?? v.record?.source_url ?? opts.evidenceUrl ?? null;
 
@@ -113,7 +118,7 @@ export async function stageRecords(db: Db, opts: StageOptions): Promise<StageSum
 
       // Nothing changed, so there's nothing new to review: any warnings were seen when this data was approved.
       if (d.action === "reconfirm") {
-        await applyReconfirm(tx, actor, table, match.targetId!, opts.sourceId);
+        await applyReconfirm(tx, actor, table, match.targetId!, opts.sourceId, r.confidence);
         await insert({
           target_table: table,
           target_id: match.targetId,

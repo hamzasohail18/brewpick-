@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { ArrowLeft, Camera, Clock, ExternalLink, Globe, AtSign, Navigation, Phone, Star } from "lucide-react";
+import { ArrowLeft, AtSign, BadgeCheck, Camera, Clock, ExternalLink, Flag, Globe, Navigation, PencilLine, Phone, Star, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfidenceBadge, SampleBadge } from "@/components/app/badges";
 import { CompareSizeButtons } from "@/components/app/compare-buttons";
@@ -276,6 +276,44 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
         </h2>
         {place.address && <p className="text-sm">{place.address}</p>}
         <MiniMap lat={place.lat} lng={place.lng} name={place.name} />
+      </section>
+
+      <section aria-labelledby="help" className="space-y-3 rounded-xl border bg-card p-4">
+        <h2 id="help" className="font-semibold">
+          Help keep this right
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" className="h-11">
+            <Link href={`/places/${place.slug}/suggest`}>
+              <PencilLine aria-hidden />
+              Suggest a correction
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="h-11">
+            <Link href={`/places/${place.slug}/suggest?type=new_deal`}>
+              <Tag aria-hidden />
+              Add a deal
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" className="h-11">
+            <Link href={`/places/${place.slug}/report`}>
+              <Flag aria-hidden />
+              Report a problem
+            </Link>
+          </Button>
+        </div>
+        {place.isClaimed ? (
+          <p className="flex items-center gap-1.5 text-sm text-success">
+            <BadgeCheck aria-hidden className="size-4" /> Managed by the verified owner
+          </p>
+        ) : (
+          <p className="text-sm">
+            Run this cafe?{" "}
+            <Link href={`/places/${place.slug}/claim`} className="font-medium underline underline-offset-2">
+              Claim this free listing
+            </Link>
+          </p>
+        )}
       </section>
 
       <footer className="space-y-1 border-t pt-4 text-xs text-muted-foreground">

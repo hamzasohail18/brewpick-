@@ -30,7 +30,7 @@ export const hoursKeys = (hours: HoursEntry[]) =>
 
 export const PriceRecord = z.object({
   kind: z.literal("item_price"),
-  place_id: z.uuid(),
+  place_id: z.guid(),
   item: z.object({
     display_name: z.string().trim().min(1),
     drink_type_slug: z.string().nullable().default(null),
@@ -73,7 +73,7 @@ export const PlaceRecord = z.object({
 
 export const NutritionRecord = z.object({
   kind: z.literal("nutrition"),
-  place_id: z.uuid(),
+  place_id: z.guid(),
   item_display_name: z.string().trim().min(1),
   size_label: z.string().trim().min(1),
   milk_type_slug: z.string().nullable().default(null),
@@ -90,8 +90,8 @@ export const NutritionRecord = z.object({
 
 export const DealRecord = z.object({
   kind: z.literal("deal"),
-  place_id: z.uuid().nullable(),
-  brand_id: z.uuid().nullable().default(null),
+  place_id: z.guid().nullable(),
+  brand_id: z.guid().nullable().default(null),
   title: z.string().trim().min(1),
   deal_type: z.enum(["bank_card", "delivery_app", "loyalty", "happy_hour", "combo", "student", "other"]),
   discount: z.enum(["percent", "flat_pkr", "bogo", "fixed_price", "free_item"]),
@@ -114,7 +114,7 @@ export const DealRecord = z.object({
 
 export const BeanRecord = z.object({
   kind: z.literal("bean"),
-  place_id: z.uuid(),
+  place_id: z.guid(),
   item_display_name: z.string().trim().nullable().default(null), // null = house beans
   bean_kind: z.enum(["single_origin", "blend"]).nullable().default(null),
   origin_country: z.string().trim().nullable().default(null),

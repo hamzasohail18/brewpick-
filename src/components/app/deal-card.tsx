@@ -20,6 +20,7 @@ import {
 import { formatClock } from "@/lib/explore/hours";
 import { useNow } from "@/lib/explore/origin";
 import { safeHttp, safeImage } from "@/lib/explore/links";
+import { DealVotes } from "./deal-votes";
 
 /** One deal with terms, schedule, who can use it, whether it's on now, and its source (Section 3C). */
 export function DealCard({ deal: d, showPlaces = false, nearestM = null }: { deal: DealView; showPlaces?: boolean; nearestM?: number | null }) {
@@ -112,6 +113,12 @@ export function DealCard({ deal: d, showPlaces = false, nearestM = null }: { dea
           </a>
         )}
       </p>
+      <DealVotes
+        dealId={d.id}
+        upvotes={d.upvotes}
+        downvotes={d.downvotes}
+        reportHref={d.places[0] ? `/places/${d.places[0].slug}/report?deal=${d.id}` : undefined}
+      />
     </article>
   );
 }

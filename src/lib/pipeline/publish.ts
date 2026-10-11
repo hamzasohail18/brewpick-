@@ -37,11 +37,37 @@ async function audit(
   );
 }
 
-/** Re-confirmation: the live data is unchanged; record that someone looked again today. */
-export async function applyReconfirm(tx: Db, who: Reviewer, table: string, targetId: string, sourceId: string | null) {
+/**
+ * Re-confirmation: the live data is unchanged; record that someone looked again today. When the
+ * confirming source is stronger than what's stored (an owner or an in-store check confirming a
+ * community-reported price), the record moves up to that confidence; it never moves down.
+ */
+export async function applyReconfirm(
+  tx: Db,
+  who: Reviewer,
+  table: string,
+  targetId: string,
+  sourceId: string | null,
+  confidence?: "verified" | "community_reported" | "estimated" | null,
+) {
   if (!Object.values(TARGET_TABLE).includes(table)) throw new Error(`Unknown target table ${table}`);
-  await tx.query(`update ${table} set last_verified_at = now() where id = $1`, [targetId]);
-  await audit(tx, who, table, targetId, "reconfirm", null, { last_verified_at: "now" }, sourceId);
+  // confidence_level is ordered strongest first, so least() keeps the stronger of the two.
+  const [before] = await tx.query<{ confidence: string }>(`select confidence from ${table} where id = $1`, [targetId]);
+  await tx.query(
+    `update ${table} set last_verified_at = now(), confidence = least(confidence, coalesce($2::confidence_level, confidence)) where id = $1`,
+    [targetId, confidence ?? null],
+  );
+  const [after] = await tx.query<{ confidence: string }>(`select confidence from ${table} where id = $1`, [targetId]);
+  await audit(
+    tx,
+    who,
+    table,
+    targetId,
+    "reconfirm",
+    before && after && before.confidence !== after.confidence ? { confidence: before.confidence } : null,
+    { last_verified_at: "now", ...(before && after && before.confidence !== after.confidence ? { confidence: after.confidence } : {}) },
+    sourceId,
+  );
 }
 
 // ---------- prices ----------
@@ -314,7 +340,7 @@ export async function approveStaged(tx: Db, who: Reviewer, stagingId: string, ed
   if (row.action === "delete") {
     liveId = await applyRemoval(tx, who, row.target_id!, row.source_id);
   } else if (row.action === "reconfirm" && edited === undefined) {
-    await applyReconfirm(tx, who, row.target_table, row.target_id!, row.source_id);
+    await applyReconfirm(tx, who, row.target_table, row.target_id!, row.source_id, (row.proposed as { confidence?: "verified" | "community_reported" | "estimated" })?.confidence);
     liveId = row.target_id!;
   } else {
     const v = validateRecord(edited ?? row.proposed);

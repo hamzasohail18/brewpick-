@@ -16,7 +16,7 @@ export type CaptureItem = z.infer<typeof CaptureItem>;
 /** What the phone sends (as the "capture" JSON field of a multipart form, photos alongside). */
 export const CaptureSubmission = z.object({
   id: z.uuid(),
-  place_id: z.uuid(),
+  place_id: z.guid(), // any Postgres uuid (sample ids are md5-based, not RFC version 4)
   captured_at: z.iso.datetime({ offset: true }),
   location: z
     .object({

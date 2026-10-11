@@ -107,12 +107,16 @@ export interface AccountState {
   /** Saved cards are kept on the account too (opt-in; off = this phone only). */
   cardsSynced: boolean;
   syncError: string | null;
+  /** This user's "did the deal work?" votes, by deal id. */
+  dealVotes: Record<string, boolean>;
+  /** Places this user manages as the verified owner. */
+  ownsPlaces: number;
 }
 
 const syncPref = createStore<boolean>("bp.cardsSync", false, (v): v is boolean => typeof v === "boolean");
 // In memory only: the email and profile are never written to browser storage.
 const account = (() => {
-  const initial: AccountState = { status: "unknown", email: null, profile: null, cardsSynced: false, syncError: null };
+  const initial: AccountState = { status: "unknown", email: null, profile: null, cardsSynced: false, syncError: null, dealVotes: {}, ownsPlaces: 0 };
   let value = initial;
   const listeners = new Set<() => void>();
   return {
@@ -148,7 +152,7 @@ let loading: Promise<void> | null = null;
 export function loadAccount(force = false): Promise<void> {
   if (loading && !force) return loading;
   loading = (async () => {
-    let me: { signedIn: boolean; email?: string | null; profile?: Profile; favorites?: FavoritePlace[]; cards?: number[] };
+    let me: { signedIn: boolean; email?: string | null; profile?: Profile; favorites?: FavoritePlace[]; cards?: number[]; dealVotes?: Record<string, boolean>; ownsPlaces?: number };
     try {
       const res = await fetch("/api/me", { cache: "no-store" });
       me = await res.json();
@@ -165,7 +169,7 @@ export function loadAccount(force = false): Promise<void> {
     favStore.set([...server, ...local.filter((f) => !isFavorite(server, f.placeId))]);
     const cardsSynced = syncPref.get();
     if (budgetStore.get() === null && me.profile?.defaultBudgetPkr) budgetStore.set(me.profile.defaultBudgetPkr);
-    account.set({ status: "signedIn", email: me.email ?? null, profile: me.profile ?? null, cardsSynced, syncError: null });
+    account.set({ status: "signedIn", email: me.email ?? null, profile: me.profile ?? null, cardsSynced, syncError: null, dealVotes: me.dealVotes ?? {}, ownsPlaces: me.ownsPlaces ?? 0 });
     if (toUpload.length) await post("/api/me/favorites", "POST", { add: toUpload });
     if (cardsSynced) {
       const union = [...new Set([...(me.cards ?? []), ...currentCards()])];
@@ -196,6 +200,21 @@ export async function saveProfile(patch: Partial<{ display_name: string | null; 
     },
   });
   await post("/api/me", "PATCH", patch);
+}
+
+/** Vote on whether a deal worked (true/false), or take the vote back (null). Returns the new tallies. */
+export async function voteDeal(dealId: string, accurate: boolean | null): Promise<{ upvotes: number; downvotes: number } | null> {
+  const cur = account.get();
+  const dealVotes = { ...cur.dealVotes };
+  if (accurate === null) delete dealVotes[dealId];
+  else dealVotes[dealId] = accurate;
+  account.set({ ...cur, dealVotes });
+  const res = await post(`/api/deals/${dealId}/vote`, "POST", { accurate });
+  if (!res) {
+    account.set({ ...account.get(), dealVotes: cur.dealVotes }); // undo on failure
+    return null;
+  }
+  return (await res.json()) as { upvotes: number; downvotes: number };
 }
 
 // Keep the account's cards in step with the phone while sync is on.

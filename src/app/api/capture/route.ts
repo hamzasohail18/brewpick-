@@ -4,16 +4,9 @@ import { canCapture, getActor } from "@/lib/auth/session";
 import { CaptureRejected, findCapture, processCapture } from "@/lib/capture/process";
 import { CaptureSubmission, MAX_PHOTO_BYTES, MAX_PHOTOS } from "@/lib/capture/schema";
 import { isJpeg, saveProofJpeg } from "@/lib/uploads";
+import { publicOrigin } from "@/lib/http";
 
 const fail = (status: number, error: string, extra: Record<string, unknown> = {}) => NextResponse.json({ error, ...extra }, { status });
-
-/** Absolute origin for stored proof URLs (APP_URL in production; the request's host in dev). */
-function origin(req: NextRequest) {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  const proto = req.headers.get("x-forwarded-proto") ?? "http";
-  return host ? `${proto}://${host}` : req.nextUrl.origin;
-}
 
 export async function POST(req: NextRequest) {
   const actor = await getActor();
@@ -52,7 +45,7 @@ export async function POST(req: NextRequest) {
     const bytes = new Uint8Array(await photo.arrayBuffer());
     if (!isJpeg(bytes)) return fail(415, "Photos must be JPEG.");
     try {
-      urls.push(`${origin(req)}${await saveProofJpeg(bytes)}`);
+      urls.push(`${publicOrigin(req)}${await saveProofJpeg(bytes)}`);
     } catch {
       return fail(415, "A photo couldn't be read.");
     }

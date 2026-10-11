@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { pendingCount } from "@/lib/admin/review-repo";
+import { dbAs } from "@/lib/db";
+import { moderationCounts } from "@/lib/community/actions";
 import { requireAdmin, devAuthEnabled } from "@/lib/auth/session";
 import { signOut } from "../login/actions";
 
@@ -8,6 +10,8 @@ import { signOut } from "../login/actions";
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const admin = await requireAdmin();
   const pending = await pendingCount(admin);
+  const mod = await dbAs(admin, (tx) => moderationCounts(tx));
+  const modCount = mod.reports + mod.claims + mod.deals + mod.submissions;
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
@@ -22,6 +26,15 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
               {pending > 0 && (
                 <span className="rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground tabular-nums">
                   {pending}
+                  <span className="sr-only"> waiting</span>
+                </span>
+              )}
+            </Link>
+            <Link href="/admin/moderation" className="flex min-h-11 items-center gap-1.5 rounded-md px-3 whitespace-nowrap hover:bg-accent">
+              Moderation
+              {modCount > 0 && (
+                <span className="rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground tabular-nums">
+                  {modCount}
                   <span className="sr-only"> waiting</span>
                 </span>
               )}

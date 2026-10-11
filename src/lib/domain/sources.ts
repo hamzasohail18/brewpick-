@@ -123,7 +123,7 @@ export const SourceFormSchema = z
     name: z.string().trim().min(2, "Required"),
     kind: z.enum(SOURCE_KINDS),
     base_url: optionalUrl,
-    place_id: optionalText.refine((v) => v === null || z.uuid().safeParse(v).success, "Must be a place UUID"),
+    place_id: optionalText.refine((v) => v === null || z.guid().safeParse(v).success, "Must be a place UUID"),
     automation: z.enum(AUTOMATION_STATUSES),
     automation_notes: optionalText,
     tos_url: optionalUrl,

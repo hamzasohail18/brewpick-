@@ -4,7 +4,7 @@ import { dbAs } from "@/lib/db";
 import { badRequest, forbidden, json, sameOrigin, signedOut } from "@/lib/http";
 import { addFavorites, removeFavorite } from "@/lib/profile/repo";
 
-const Body = z.object({ add: z.array(z.uuid()).max(500).default([]), remove: z.uuid().optional() });
+const Body = z.object({ add: z.array(z.guid()).max(500).default([]), remove: z.guid().optional() });
 
 /** { add: [placeId, ...] } adds (also used to merge favourites saved on the phone); { remove: placeId } removes one. */
 export async function POST(req: Request) {

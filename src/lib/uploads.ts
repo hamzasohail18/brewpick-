@@ -36,20 +36,30 @@ export function stripJpegMetadata(input: Uint8Array): Uint8Array {
   throw new Error("Corrupt JPEG");
 }
 
-/** Saves a JPEG (metadata stripped) and returns its public path, e.g. "/uploads/2026/10/<uuid>.jpg". */
-export async function saveProofJpeg(bytes: Uint8Array, now = new Date()): Promise<string> {
+/**
+ * Private uploads (owner-claim documents) live outside the public folder and are served only to
+ * admins, at /admin/files/<path>.
+ */
+const PRIVATE_DIR = process.env.PRIVATE_UPLOAD_DIR ?? join(process.cwd(), ".data", "private-uploads");
+
+/**
+ * Saves a JPEG (metadata stripped) and returns its path: public "/uploads/2026/10/<uuid>.jpg"
+ * (menu and offer proof, shown next to prices) or private "/admin/files/2026/10/<uuid>.jpg".
+ */
+export async function saveProofJpeg(bytes: Uint8Array, now = new Date(), visibility: "public" | "private" = "public"): Promise<string> {
   const clean = stripJpegMetadata(bytes);
   const folder = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
   const name = `${randomUUID()}.jpg`;
-  await mkdir(join(UPLOAD_DIR, folder), { recursive: true });
-  await writeFile(join(UPLOAD_DIR, folder, name), clean);
-  return `/uploads/${folder}/${name}`;
+  const dir = visibility === "private" ? PRIVATE_DIR : UPLOAD_DIR;
+  await mkdir(join(dir, folder), { recursive: true });
+  await writeFile(join(dir, folder, name), clean);
+  return `${visibility === "private" ? "/admin/files" : "/uploads"}/${folder}/${name}`;
 }
 
 /** Reads an upload by its path segments, refusing anything that escapes the upload folder. */
-export async function readUpload(segments: string[]): Promise<Uint8Array | null> {
+export async function readUpload(segments: string[], visibility: "public" | "private" = "public"): Promise<Uint8Array | null> {
   if (!segments.every((s) => /^[A-Za-z0-9._-]+$/.test(s) && s !== ".." && s !== ".")) return null;
-  const root = normalize(UPLOAD_DIR);
+  const root = normalize(visibility === "private" ? PRIVATE_DIR : UPLOAD_DIR);
   const full = normalize(join(root, ...segments));
   if (!full.startsWith(root + sep)) return null;
   try {

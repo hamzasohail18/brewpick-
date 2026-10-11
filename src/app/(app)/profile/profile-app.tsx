@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Clock, CreditCard, Heart, LogIn, LogOut, Settings, ShieldCheck, Trash2 } from "lucide-react";
+import { Clock, CreditCard, Heart, LogIn, LogOut, Send, Settings, ShieldCheck, Store, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { SUBMISSION_TYPE_LABELS, type SubmissionType } from "@/lib/community/types";
+import { formatShortDate } from "@/lib/explore/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SampleBadge } from "@/components/app/badges";
@@ -90,6 +93,19 @@ export function ProfileApp({
           </p>
         )}
       </section>
+
+      {signedIn && account.ownsPlaces > 0 && (
+        <Link href="/owner" className="flex min-h-14 items-center justify-between rounded-xl border border-success/40 bg-success/10 px-4 font-medium">
+          <span className="flex items-center gap-2">
+            <Store aria-hidden className="size-4" /> Owner portal
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {account.ownsPlaces} {account.ownsPlaces === 1 ? "place" : "places"}
+          </span>
+        </Link>
+      )}
+
+      {signedIn && <MySubmissions />}
 
       {/* Favourites */}
       <section aria-labelledby="favs" className="space-y-3">
@@ -237,6 +253,64 @@ export function ProfileApp({
         </Link>
       </p>
     </main>
+  );
+}
+
+const STATUS_TEXT: Record<string, { label: string; tone: string }> = {
+  pending_review: { label: "Being checked", tone: "text-muted-foreground" },
+  published: { label: "Live", tone: "text-success" },
+  rejected: { label: "Not used", tone: "text-destructive" },
+  archived: { label: "Replaced", tone: "text-muted-foreground" },
+};
+
+function MySubmissions() {
+  const q = useQuery({
+    queryKey: ["my-submissions"],
+    queryFn: async () => {
+      const res = await fetch("/api/me/submissions", { cache: "no-store" });
+      if (!res.ok) throw new Error(`Couldn't load (${res.status})`);
+      return ((await res.json()) as { submissions: { id: string; type: SubmissionType; placeSlug: string | null; placeName: string | null; status: string; reviewNote: string | null; createdAt: string }[] }).submissions;
+    },
+    staleTime: 0,
+  });
+  if (!q.data?.length) return null;
+  return (
+    <section aria-labelledby="subs" className="space-y-3">
+      <h2 id="subs" className="flex items-center gap-2 text-lg font-semibold">
+        <Send aria-hidden className="size-4" /> My submissions
+      </h2>
+      <ul className="divide-y rounded-xl border">
+        {q.data.slice(0, 10).map((s) => {
+          const st = STATUS_TEXT[s.status] ?? { label: s.status, tone: "" };
+          return (
+            <li key={s.id} className="px-3 py-2.5 text-sm">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate">
+                  <span className="font-medium">{SUBMISSION_TYPE_LABELS[s.type]}</span>
+                  {s.placeName && (
+                    <>
+                      {" · "}
+                      {s.placeSlug ? (
+                        <Link href={`/places/${s.placeSlug}`} className="underline-offset-2 hover:underline">
+                          {s.placeName}
+                        </Link>
+                      ) : (
+                        s.placeName
+                      )}
+                    </>
+                  )}
+                </span>
+                <span className={cn("shrink-0 text-xs font-medium", st.tone)}>{st.label}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {formatShortDate(s.createdAt)}
+                {s.reviewNote && s.status === "rejected" ? ` · ${s.reviewNote}` : ""}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

@@ -26,7 +26,7 @@ export interface Validation {
   warnings: string[];
 }
 
-export function validateRecord(input: unknown, opts: { today?: string } = {}): Validation {
+export function validateRecord(input: unknown, opts: { today?: string; evidenceOptional?: boolean } = {}): Validation {
   const parsed = StagedRecord.safeParse(input);
   if (!parsed.success) {
     return {
@@ -43,8 +43,9 @@ export function validateRecord(input: unknown, opts: { today?: string } = {}): V
     out.warnings.push(why);
   };
 
-  // Every record needs a way to check it: a source URL or a proof image.
-  if (!r.source_url && !r.proof_image_url) out.errors.push("Missing source URL (or proof image).");
+  // Every record needs a way to check it: a source URL or a proof image. The one exception is a source
+  // that is itself accountable for the data (a verified owner confirming their own menu).
+  if (!r.source_url && !r.proof_image_url && !opts.evidenceOptional) out.errors.push("Missing source URL (or proof image).");
 
   switch (r.kind) {
     case "item_price":

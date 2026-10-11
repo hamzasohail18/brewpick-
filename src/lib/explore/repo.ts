@@ -233,6 +233,8 @@ export interface PlaceDetail extends Omit<PlaceSummary, "matchCount" | "cheapest
   instagramHandle: string | null;
   brandName: string | null;
   sourceKind: string | null;
+  /** A verified owner manages this listing (approved claim). */
+  isClaimed: boolean;
   menu: MenuItemDetail[];
   beans: BeanDetail[];
   deals: DealView[];
@@ -245,7 +247,7 @@ export async function getPlaceDetail(db: Db, slug: string): Promise<PlaceDetail 
             p.halal_certified, p.has_wifi, p.has_family_seating, p.has_drive_thru,
             display_confidence(p.confidence, coalesce(p.last_verified_at, p.created_at)) as confidence,
             coalesce(p.last_verified_at, p.created_at) as verified_at,
-            p.address, p.phone, p.website_url, p.instagram_handle, b.name as brand_name,
+            p.address, p.phone, p.website_url, p.instagram_handle, b.name as brand_name, p.claimed_by is not null as is_claimed,
             sl.name as source_name, sl.kind as source_kind
        from places p
        left join areas a on a.id = p.area_id
@@ -393,6 +395,7 @@ export async function getPlaceDetail(db: Db, slug: string): Promise<PlaceDetail 
     websiteUrl: (p.website_url as string) ?? null,
     instagramHandle: (p.instagram_handle as string) ?? null,
     brandName: (p.brand_name as string) ?? null,
+    isClaimed: p.is_claimed as boolean,
     hours: normHours(hours),
     hasMenu: items.size > 0,
     menu: [...items.values()],
