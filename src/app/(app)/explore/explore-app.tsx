@@ -26,6 +26,9 @@ import { useNow, useOrigin } from "@/lib/explore/origin";
 import type { PlaceSummary } from "@/lib/explore/repo";
 import { distanceM } from "@/lib/explore/travel";
 import { formatPkr } from "@/lib/explore/format";
+import { CardsButton } from "@/components/app/cards-sheet";
+import { useCards } from "@/lib/deals/cards";
+import { effectivePrice } from "@/lib/deals/engine";
 import { FilterSheet, type FilterOptions } from "./filter-sheet";
 import { PlaceCard, PlaceCardSkeleton } from "./place-card";
 
@@ -88,6 +91,7 @@ export function ExploreApp({
   const originState = useOrigin();
   const origin = originState.origin;
   const now = useNow();
+  const cards = useCards();
   const sort: Sort = filters.sort ?? (origin ? "distance" : "name");
 
   const rows = useMemo(() => {
@@ -96,6 +100,16 @@ export function ExploreApp({
       distanceM: origin ? distanceM(origin, place) : null,
       open: now ? openStatus(place.hours, now) : null,
       pick: sort === "calories" ? (place.lightest ?? place.cheapest) : place.cheapest,
+      // Price after the best deal this user can use now: what "Cheapest" sorts on.
+      effective:
+        place.cheapest && now
+          ? effectivePrice(
+              { pricePkr: place.cheapest.pricePkr, menuItemId: place.cheapest.menuItemId, placeId: place.id, brandId: place.brandId, channel: place.cheapest.channel },
+              place.deals,
+              cards,
+              now,
+            ).effectivePricePkr
+          : (place.cheapest?.pricePkr ?? null),
     }));
     const filtered = list.filter(
       (r) =>
@@ -105,7 +119,7 @@ export function ExploreApp({
     const last = Number.POSITIVE_INFINITY;
     const key: Record<Sort, (r: (typeof list)[number]) => number | string> = {
       distance: (r) => r.distanceM ?? last,
-      price: (r) => r.place.cheapest?.pricePkr ?? last,
+      price: (r) => r.effective ?? last,
       calories: (r) => r.place.lightest?.kcal ?? last,
       rating: (r) => -(r.place.rating ?? -1),
       name: (r) => `${r.place.name} ${r.place.branchName ?? ""}`.toLowerCase(),
@@ -116,7 +130,7 @@ export function ExploreApp({
       const kb = k(b);
       return ka < kb ? -1 : ka > kb ? 1 : a.place.name.localeCompare(b.place.name);
     });
-  }, [query.data, origin, now, filters.openNow, filters.maxKm, sort]);
+  }, [query.data, origin, now, cards, filters.openNow, filters.maxKm, sort]);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
@@ -160,6 +174,7 @@ export function ExploreApp({
             {t("explore.filters")}
             {filterCount > 0 && <span className="rounded-full bg-primary-foreground/20 px-1.5 text-xs tabular-nums">{filterCount}</span>}
           </Chip>
+          <CardsButton />
           <Chip pressed={!!filters.openNow} onClick={() => toggle("openNow")}>Open now</Chip>
           <Chip pressed={!!filters.deals} onClick={() => toggle("deals")}>Deals</Chip>
           <Chip pressed={!!filters.wifi} onClick={() => toggle("wifi")}>Wi-Fi</Chip>

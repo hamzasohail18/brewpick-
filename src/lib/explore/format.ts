@@ -45,8 +45,11 @@ export function dealEndsSoon(validTo: string, now: Date = new Date()): number | 
   return hours > 0 && hours <= 48 ? Math.ceil(hours) : null;
 }
 
-export function endsInLabel(hours: number): string {
-  return hours <= 24 ? `Ends in ${hours} h` : "Ends in 2 days";
+/** Badge text for a deal ending within 48 hours: it ends at midnight after its last day. */
+export function endsInLabel(validTo: string, now: Date = new Date()): string {
+  const hours = dealEndsSoon(validTo, now);
+  if (hours !== null && hours <= 6) return `Ends in ${hours} h`;
+  return validTo === karachiDate(now) ? "Ends tonight" : "Ends tomorrow";
 }
 
 const CONDITION_LABELS: Record<string, string> = {

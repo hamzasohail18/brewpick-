@@ -94,3 +94,16 @@ describe("explore filters", () => {
     expect(hasDrinkFilters(parseFilters({ wifi: "1" }))).toBe(false);
   });
 });
+
+describe("deal ending badge", () => {
+  test("only within 48 hours, worded by Lahore day", async () => {
+    const { dealEndsSoon, endsInLabel } = await import("@/lib/explore/format");
+    const at = new Date("2026-10-11T15:00:00+05:00");
+    expect(dealEndsSoon("2026-10-11", at)).toBe(9);
+    expect(endsInLabel("2026-10-11", at)).toBe("Ends tonight");
+    expect(endsInLabel("2026-10-12", at)).toBe("Ends tomorrow");
+    expect(dealEndsSoon("2026-10-14", at)).toBeNull();
+    expect(endsInLabel("2026-10-11", new Date("2026-10-11T20:30:00+05:00"))).toBe("Ends in 4 h");
+    expect(dealEndsSoon("2026-10-10", at)).toBeNull(); // already over
+  });
+});

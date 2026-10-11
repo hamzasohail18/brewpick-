@@ -6,10 +6,13 @@ import type { ConfidenceLevel } from "@/lib/domain/sources";
 import type { ExploreFilters } from "./filters";
 import { hasDrinkFilters } from "./filters";
 import type { HoursRow } from "./hours";
+import type { DealRule } from "@/lib/deals/engine";
+import { loadDeals, toRule, type DealView } from "@/lib/deals/repo";
 
 export type PriceChannel = "dine_in" | "takeaway" | "delivery";
 
 export interface DrinkPick {
+  menuItemId: string;
   name: string;
   drinkType: string | null;
   size: string;
@@ -52,6 +55,9 @@ export interface PlaceSummary {
   /** Lowest-calorie matching drink with calorie data. */
   lightest: DrinkPick | null;
   dealCount: number;
+  brandId: string | null;
+  /** Live deals at this place (its own and brand-wide), for effective prices on the phone. */
+  deals: DealRule[];
 }
 
 const TODAY = "(now() at time zone 'Asia/Karachi')::date";
@@ -61,7 +67,7 @@ const ACTIVE_DEAL = `d.status = 'published' and d.valid_from <= ${TODAY} and d.v
   and (d.place_id = p.id or (d.place_id is null and d.brand_id = p.brand_id))`;
 
 const PICK_COLUMNS = `
-  m.display_name as name, m.drink_type_slug as "drinkType", m.size_label as size, m.volume_ml as "volumeMl",
+  m.menu_item_id as "menuItemId", m.display_name as name, m.drink_type_slug as "drinkType", m.size_label as size, m.volume_ml as "volumeMl",
   m.price_pkr as "pricePkr", m.channel, m.calories_kcal as kcal, m.sugar_g::float8 as "sugarG",
   m.caffeine_mg as "caffeineMg", m.price_confidence as "priceConfidence", m.price_verified_at as "priceVerifiedAt",
   m.nutrition_confidence as "nutritionConfidence"`;
@@ -119,12 +125,12 @@ export async function searchPlaces(db: Db, f: ExploreFilters): Promise<PlaceSumm
   if (f.driveThru) place.push("p.has_drive_thru");
   if (f.deals) place.push(`exists (select 1 from deals d where ${ACTIVE_DEAL})`);
 
-  const rows = await db.query<Omit<PlaceSummary, "hours" | "verifiedAt"> & { hours: RawHours[] | null; verifiedAt: Date | string }>(
+  const rows = await db.query<Omit<PlaceSummary, "hours" | "verifiedAt" | "deals"> & { hours: RawHours[] | null; verifiedAt: Date | string }>(
     `with m as (
        select m.* from v_current_menu m where ${drink.join(" and ")}
      ),
      agg as (select place_id, count(*)::int as n from m group by place_id)
-     select p.id, p.slug, p.name, p.branch_name as "branchName", p.type, a.name as "areaName",
+     select p.id, p.slug, p.name, p.branch_name as "branchName", p.brand_id as "brandId", p.type, a.name as "areaName",
             p.lat::float8 as lat, p.lng::float8 as lng, p.is_sample as "isSample",
             p.rating_avg::float8 as rating, coalesce(p.rating_count, 0) as "ratingCount",
             p.halal_certified as halal, p.has_wifi as wifi, p.has_family_seating as family, p.has_drive_thru as "driveThru",
@@ -150,12 +156,14 @@ export async function searchPlaces(db: Db, f: ExploreFilters): Promise<PlaceSumm
     params,
   );
 
+  const deals = (await loadDeals(db, { placeIds: rows.filter((r) => r.dealCount > 0).map((r) => r.id) })).map(toRule);
   return rows.map((r) => ({
     ...r,
     verifiedAt: iso(r.verifiedAt),
     hours: normHours(r.hours),
     cheapest: normPick(r.cheapest),
     lightest: normPick(r.lightest),
+    deals: deals.filter((d) => d.placeId === r.id || (d.placeId === null && d.brandId !== null && d.brandId === r.brandId)),
   }));
 }
 
@@ -218,35 +226,7 @@ export interface BeanDetail {
   sourceName: string | null;
 }
 
-export interface DealDetail {
-  id: string;
-  title: string;
-  dealType: string;
-  discount: string;
-  discountValue: number | null;
-  maxDiscountPkr: number | null;
-  minSpendPkr: number | null;
-  validFrom: string; // YYYY-MM-DD
-  validTo: string;
-  daysOfWeek: number[] | null;
-  startTime: string | null;
-  endTime: string | null;
-  terms: string | null;
-  isBrandWide: boolean;
-  isSample: boolean;
-  paymentMethods: string[];
-  conditions: string[];
-  items: string[];
-  sourceName: string | null;
-  sourceUrl: string | null;
-  proofImageUrl: string | null;
-  confidence: ConfidenceLevel;
-  verifiedAt: string;
-  upvotes: number;
-  downvotes: number;
-}
-
-export interface PlaceDetail extends Omit<PlaceSummary, "matchCount" | "cheapest" | "lightest" | "dealCount"> {
+export interface PlaceDetail extends Omit<PlaceSummary, "matchCount" | "cheapest" | "lightest" | "dealCount" | "deals"> {
   address: string | null;
   phone: string | null;
   websiteUrl: string | null;
@@ -255,12 +235,12 @@ export interface PlaceDetail extends Omit<PlaceSummary, "matchCount" | "cheapest
   sourceKind: string | null;
   menu: MenuItemDetail[];
   beans: BeanDetail[];
-  deals: DealDetail[];
+  deals: DealView[];
 }
 
 export async function getPlaceDetail(db: Db, slug: string): Promise<PlaceDetail | null> {
   const [p] = await db.query<Record<string, unknown>>(
-    `select p.id, p.slug, p.name, p.branch_name, p.type, a.name as area_name, p.lat::float8 as lat, p.lng::float8 as lng,
+    `select p.id, p.slug, p.name, p.branch_name, p.brand_id, p.type, a.name as area_name, p.lat::float8 as lat, p.lng::float8 as lng,
             p.is_sample, p.rating_avg::float8 as rating, coalesce(p.rating_count, 0) as rating_count,
             p.halal_certified, p.has_wifi, p.has_family_seating, p.has_drive_thru,
             display_confidence(p.confidence, coalesce(p.last_verified_at, p.created_at)) as confidence,
@@ -303,22 +283,7 @@ export async function getPlaceDetail(db: Db, slug: string): Promise<PlaceDetail 
         order by bi.menu_item_id nulls first`,
       [placeId],
     ),
-    db.query<Record<string, unknown>>(
-      `select d.*, to_char(d.valid_from, 'YYYY-MM-DD') as valid_from_s, to_char(d.valid_to, 'YYYY-MM-DD') as valid_to_s,
-              sl.name as source_name, coalesce(d.last_verified_at, d.captured_at) as verified_at,
-              display_confidence(d.confidence, coalesce(d.last_verified_at, d.captured_at)) as display_confidence,
-              array(select pm.name from deal_payment_methods dpm join payment_methods pm on pm.id = dpm.payment_method_id
-                     where dpm.deal_id = d.id order by pm.name) as payment_methods,
-              array(select dc.condition_key from deal_conditions dc where dc.deal_id = d.id order by dc.id) as conditions,
-              array(select mi.display_name from deal_items di join menu_items mi on mi.id = di.menu_item_id
-                     where di.deal_id = d.id order by mi.display_name) as items
-         from deals d
-         join places p on p.id = $1
-         left join v_source_labels sl on sl.id = d.source_id
-        where ${ACTIVE_DEAL}
-        order by d.valid_to, d.title`,
-      [placeId],
-    ),
+    loadDeals(db, { placeIds: [placeId] }),
   ]);
 
   const itemIds = [...new Set(menuRows.map((r) => r.menu_item_id as string))];
@@ -407,6 +372,7 @@ export async function getPlaceDetail(db: Db, slug: string): Promise<PlaceDetail 
     slug: p.slug as string,
     name: p.name as string,
     branchName: (p.branch_name as string) ?? null,
+    brandId: (p.brand_id as string) ?? null,
     type: p.type as string,
     areaName: (p.area_name as string) ?? null,
     lat: p.lat as number,
@@ -444,33 +410,7 @@ export async function getPlaceDetail(db: Db, slug: string): Promise<PlaceDetail 
       verifiedAt: iso(b.verified_at as Date),
       sourceName: (b.source_name as string) ?? null,
     })),
-    deals: deals.map((d) => ({
-      id: d.id as string,
-      title: d.title as string,
-      dealType: d.deal_type as string,
-      discount: d.discount as string,
-      discountValue: numOrNull(d.discount_value),
-      maxDiscountPkr: (d.max_discount_pkr as number) ?? null,
-      minSpendPkr: (d.min_spend_pkr as number) ?? null,
-      validFrom: d.valid_from_s as string,
-      validTo: d.valid_to_s as string,
-      daysOfWeek: (d.days_of_week as number[]) ?? null,
-      startTime: d.start_time ? String(d.start_time).slice(0, 5) : null,
-      endTime: d.end_time ? String(d.end_time).slice(0, 5) : null,
-      terms: (d.terms as string) ?? null,
-      isBrandWide: d.place_id === null,
-      isSample: d.is_sample as boolean,
-      paymentMethods: d.payment_methods as string[],
-      conditions: d.conditions as string[],
-      items: d.items as string[],
-      sourceName: (d.source_name as string) ?? null,
-      sourceUrl: (d.source_url as string) ?? null,
-      proofImageUrl: (d.proof_image_url as string) ?? null,
-      confidence: d.display_confidence as ConfidenceLevel,
-      verifiedAt: iso(d.verified_at as Date),
-      upvotes: d.upvotes as number,
-      downvotes: d.downvotes as number,
-    })),
+    deals,
   };
 }
 

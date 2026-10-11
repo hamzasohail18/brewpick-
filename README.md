@@ -172,6 +172,16 @@ location check reports "missing" and captures are flagged; use a deployed HTTPS 
 
 Picks collect in a tray (kept in this browser only) from the Explore cards and the place pages. The page can also start from scratch: pick a drink, then places. Rows are price, price after deals, size, price per 100 ml, calories, sugar, caffeine, calories per Rs 100, beans, distance, open now, rating, deals, and confidence with source. The best value in each row is marked with ✓ and a label, not colour alone. Lower wins for prices and calories; higher wins for caffeine ("strongest") and rating. Unknown values never win, and a row where all values are equal marks nothing. "After deals" counts only deals open to everyone right now; the user's saved cards come with the Deals step. Share uses the phone's share sheet (or copies the link); WhatsApp opens with a text summary and the link.
 
+### Deals and effective price
+
+`/deals` lists every live deal: bank cards, wallets, delivery apps, happy hours, combos and student offers. Each shows its terms, days and times, minimum spend, items it covers, conditions, validity, source link or proof photo, and how sure we are. Expired deals never reach the page (RLS plus the date check in `src/lib/deals/repo.ts`). Deals ending within 48 hours get an "Ends tonight / Ends tomorrow" badge, and each deal says whether it's on right now and whether you can use it. Filters: "I can use", "On now", and deal type. Sort: ending soonest, or nearest when a location is set.
+
+**My cards:** the user picks the banks, wallets and apps they hold (names only, never card numbers). The choice is stored in this browser (`bp.cards`); syncing to an account comes with the Profile step. Explore cards, place menus and Compare show the price after the best deal the user can use right now, and recalculate the moment a card is toggled.
+
+**One rule, two engines:** `effective_price_detail()` in SQL is the reference. `src/lib/deals/engine.ts` mirrors it line for line, so prices update instantly on the phone and work offline. `tests/deals/parity.test.ts` runs both over every sample drink × 5 card sets × 56 times across a week (10,000+ checks, with extra fixed-price, 12.5% rounding, free-item and tie deals) and requires identical results. If you change one, change the other.
+
+Assumptions: BOGO counts as 50% off each cup. "Free item" deals don't reduce the drink's price. Minimum spend is checked against a single cup. Percentage discounts round half away from zero, as Postgres does.
+
 **Map tiles:** the map uses Leaflet with OpenStreetMap's standard tile server by default. That's fine for development and light use, but the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/) doesn't allow heavy traffic. Before launch, set `NEXT_PUBLIC_MAP_TILE_URL` (and `NEXT_PUBLIC_MAP_ATTRIBUTION`) to a tile provider with a suitable plan, or self-host tiles.
 
 ## Sample data

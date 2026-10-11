@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { ArrowLeft, Camera, Clock, CreditCard, ExternalLink, Globe, AtSign, Navigation, Phone, Star, Tag } from "lucide-react";
+import { ArrowLeft, Camera, Clock, ExternalLink, Globe, AtSign, Navigation, Phone, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfidenceBadge, SampleBadge } from "@/components/app/badges";
 import { CompareSizeButtons } from "@/components/app/compare-buttons";
@@ -12,18 +12,17 @@ import { cn } from "@/lib/utils";
 import {
   CHANNEL_LABELS,
   checkedAgo,
-  conditionLabel,
-  DEAL_TYPE_LABELS,
-  dealEndsSoon,
-  dealSchedule,
-  discountLabel,
-  endsInLabel,
-  formatDealDate,
   formatPkr,
 } from "@/lib/explore/format";
 import { PLACE_TYPE_LABELS, ROAST_LABELS } from "@/lib/explore/filters";
 import { lahoreClock, weeklyHours } from "@/lib/explore/hours";
-import { getPlaceDetail, type DealDetail, type MenuItemDetail, type PriceLine } from "@/lib/explore/repo";
+import { getPlaceDetail, type MenuItemDetail, type PriceLine } from "@/lib/explore/repo";
+import { safeHttp, safeImage } from "@/lib/explore/links";
+import { toRule } from "@/lib/deals/repo";
+import type { DealRule } from "@/lib/deals/engine";
+import { DealCard } from "@/components/app/deal-card";
+import { CardsButton } from "@/components/app/cards-sheet";
+import { PriceAfterDeals } from "@/components/app/price-after-deals";
 import { LiveStatus, MiniMap } from "./live-status";
 
 const load = cache((slug: string) => dbAs(ANON, (tx) => getPlaceDetail(tx, slug)));
@@ -50,6 +49,7 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
     place.driveThru && "Drive-thru",
   ].filter(Boolean) as string[];
   const houseBeans = place.beans.filter((b) => !b.menuItemId);
+  const rules = place.deals.map(toRule);
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 pt-3 pb-8">
@@ -130,13 +130,17 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
 
       {place.deals.length > 0 && (
         <section aria-labelledby="deals" className="space-y-3">
-          <h2 id="deals" className="text-lg font-semibold">
-            {t("place.deals")} <span className="text-sm font-normal text-muted-foreground">({place.deals.length})</span>
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 id="deals" className="text-lg font-semibold">
+              {t("place.deals")} <span className="text-sm font-normal text-muted-foreground">({place.deals.length})</span>
+            </h2>
+            <CardsButton />
+          </div>
+          <p className="text-sm text-muted-foreground">Menu prices below show the best deal you can use right now.</p>
           <ul className="space-y-3">
             {place.deals.map((d) => (
               <li key={d.id}>
-                <DealCard deal={d} brandName={place.brandName} />
+                <DealCard deal={d} />
               </li>
             ))}
           </ul>
@@ -160,7 +164,13 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
             <ul className="space-y-3">
               {place.menu.map((item) => (
                 <li key={item.id}>
-                  <MenuItemCard item={item} placeLabel={place.branchName ? `${place.name} ${place.branchName}` : place.name} />
+                  <MenuItemCard
+                    item={item}
+                    placeLabel={place.branchName ? `${place.name} ${place.branchName}` : place.name}
+                    placeId={place.id}
+                    brandId={place.brandId}
+                    deals={rules}
+                  />
                 </li>
               ))}
             </ul>
@@ -271,7 +281,19 @@ export default async function PlacePage({ params }: PageProps<"/places/[slug]">)
 
 // ---------- menu ----------
 
-function MenuItemCard({ item, placeLabel }: { item: MenuItemDetail; placeLabel: string }) {
+function MenuItemCard({
+  item,
+  placeLabel,
+  placeId,
+  brandId,
+  deals,
+}: {
+  item: MenuItemDetail;
+  placeLabel: string;
+  placeId: string;
+  brandId: string | null;
+  deals: DealRule[];
+}) {
   const channels = new Set(item.sizes.flatMap((s) => s.prices.map((p) => p.channel)));
   const nutrition = item.sizes.map((s) => s.nutrition).filter((n) => n !== null);
   const assumptions = item.sizes.filter((s) => s.nutrition?.assumptions);
@@ -312,7 +334,10 @@ function MenuItemCard({ item, placeLabel }: { item: MenuItemDetail; placeLabel: 
                     )}
                   </th>
                   <td className="px-1 py-1.5">
-                    <span className="font-semibold tabular-nums">{formatPkr(main.pricePkr)}</span>
+                    <PriceAfterDeals
+                      cup={{ pricePkr: main.pricePkr, menuItemId: item.id, placeId, brandId, channel: main.channel }}
+                      deals={deals}
+                    />
                     {channels.size > 1 && <span className="ms-1 text-xs text-muted-foreground">{CHANNEL_LABELS[main.channel]}</span>}
                     <span className="block text-xs text-muted-foreground">{taxLabel(main.taxInclusive)}</span>
                     {others.map((o) => (
@@ -420,72 +445,3 @@ function provenance(prices: { size: string; p: PriceLine }[]) {
 
 const taxLabel = (v: boolean | null) => (v === true ? "incl. tax" : v === false ? "+ tax" : "tax not stated");
 
-// ---------- deals ----------
-
-function DealCard({ deal: d, brandName }: { deal: DealDetail; brandName: string | null }) {
-  const endsIn = dealEndsSoon(d.validTo);
-  return (
-    <article className="space-y-2 rounded-xl border border-primary/30 bg-accent/40 p-4">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-          <Tag aria-hidden className="size-3" />
-          {DEAL_TYPE_LABELS[d.dealType] ?? d.dealType}
-        </span>
-        {endsIn !== null && (
-          <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
-            {endsInLabel(endsIn)}
-          </span>
-        )}
-        {d.isSample && <SampleBadge />}
-      </div>
-      <h3 className="font-semibold">{d.title}</h3>
-      <p className="text-sm font-medium">{discountLabel(d)}</p>
-      <ul className="space-y-0.5 text-sm text-muted-foreground">
-        <li>{dealSchedule(d)}</li>
-        <li className="flex items-center gap-1">
-          <CreditCard aria-hidden className="size-3.5" />
-          {d.paymentMethods.length ? `With ${d.paymentMethods.join(" or ")}` : "Open to everyone"}
-        </li>
-        {d.items.length > 0 && <li>Only on: {d.items.join(", ")}</li>}
-        {d.conditions.length > 0 && <li>{d.conditions.map(conditionLabel).join(" · ")}</li>}
-        {d.isBrandWide && brandName && <li>At all {brandName} branches</li>}
-        <li>Valid until {formatDealDate(d.validTo)}</li>
-      </ul>
-      {d.terms && <p className="text-xs text-muted-foreground">Terms: {d.terms}</p>}
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <ConfidenceBadge level={d.confidence} checkedAt={d.verifiedAt} />
-        {d.sourceName && <span>Source: {d.sourceName}</span>}
-        {safeHttp(d.sourceUrl) && (
-          <a href={safeHttp(d.sourceUrl)!} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-6 items-center gap-0.5 underline underline-offset-2">
-            offer page <ExternalLink aria-hidden className="size-3" />
-          </a>
-        )}
-        {safeImage(d.proofImageUrl) && (
-          <a href={safeImage(d.proofImageUrl)!} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-6 items-center gap-0.5 underline underline-offset-2">
-            <Camera aria-hidden className="size-3" /> proof
-          </a>
-        )}
-      </p>
-    </article>
-  );
-}
-
-// ---------- links ----------
-
-/** Only http(s) links leave the site (no javascript:/data: from imported data). */
-function safeHttp(url: string | null): string | null {
-  if (!url) return null;
-  try {
-    const u = new URL(url);
-    return u.protocol === "https:" || u.protocol === "http:" ? u.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Proof photos: our own /uploads path, or an http(s) URL. */
-function safeImage(url: string | null): string | null {
-  if (!url) return null;
-  if (/^\/uploads\/[\w/.-]+\.jpg$/.test(url)) return url;
-  return safeHttp(url);
-}

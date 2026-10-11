@@ -11,6 +11,8 @@ import { CHANNEL_LABELS, checkedAgo, formatPkr } from "@/lib/explore/format";
 import { ROAST_LABELS } from "@/lib/explore/filters";
 import { describeOpenStatus, openStatus } from "@/lib/explore/hours";
 import { useNow, useOrigin } from "@/lib/explore/origin";
+import { useCards } from "@/lib/deals/cards";
+import { effectivePrice, type DealRule } from "@/lib/deals/engine";
 import { distanceM, formatTravel, travelEstimate } from "@/lib/explore/travel";
 
 interface Row {
@@ -27,13 +29,33 @@ interface Row {
  * (<th scope="row">), so screen readers announce "Calories, Saffron Steam Coffee: 179". The best value
  * in a row is marked with an icon and hidden text, not colour alone.
  */
-export function CompareTable({ columns, removeHref }: { columns: CompareColumn[]; removeHref: (key: string) => string }) {
+export function CompareTable({
+  columns,
+  deals,
+  removeHref,
+}: {
+  columns: CompareColumn[];
+  deals: DealRule[];
+  removeHref: (key: string) => string;
+}) {
   const { origin } = useOrigin();
   const now = useNow();
+  const cards = useCards();
+  // Prices after the best deal this user can use right now; recalculated when a card is toggled.
+  const eff = columns.map((c) =>
+    c.drink && now
+      ? effectivePrice(
+          { pricePkr: c.drink.pricePkr, menuItemId: c.drink.menuItemId, placeId: c.place.id, brandId: c.place.brandId, channel: c.drink.channel },
+          deals,
+          cards,
+          now,
+        )
+      : null,
+  );
   const d = (c: CompareColumn) => c.drink;
   const dist = columns.map((c) => (origin ? distanceM(origin, c.place) : null));
   const anyEstimated = columns.some((c) => c.drink?.nutritionConfidence === "estimated");
-  const anyDeal = columns.some((c) => c.drink && c.drink.discountPkr > 0);
+  const anyDeal = eff.some((e) => e && e.discountPkr > 0);
 
   const rows: Row[] = [
     {
@@ -54,17 +76,20 @@ export function CompareTable({ columns, removeHref }: { columns: CompareColumn[]
     },
     {
       label: "After deals",
-      hint: "Best deal open to everyone, right now",
-      values: columns.map((c) => d(c)?.effectivePricePkr ?? null),
+      hint: cards.length ? "Best deal with your cards, right now" : "Deals open to everyone, right now",
+      values: columns.map((c, i) => eff[i]?.effectivePricePkr ?? d(c)?.pricePkr ?? null),
       better: anyDeal ? "lower" : undefined,
       bestLabel: "cheapest after deals",
-      cell: (c) =>
-        c.drink && (
+      cell: (c, i) => {
+        if (!c.drink) return null;
+        const e = eff[i];
+        return (
           <>
-            {formatPkr(c.drink.effectivePricePkr)}
-            <Sub>{c.drink.dealTitle ? `${c.drink.dealTitle} (−${formatPkr(c.drink.discountPkr)})` : "No deal now"}</Sub>
+            {formatPkr(e?.effectivePricePkr ?? c.drink.pricePkr)}
+            <Sub>{e?.deal ? `${e.deal.title} (−${formatPkr(e.discountPkr)})` : "No deal you can use now"}</Sub>
           </>
-        ),
+        );
+      },
     },
     {
       label: "Size",

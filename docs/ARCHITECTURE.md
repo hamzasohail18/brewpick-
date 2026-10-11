@@ -26,6 +26,7 @@ sources ─▶│ guard ─▶ fetch/OCR ─▶ normalize ─▶ validate │─
 | Collector guard in two layers | TS guard gives readable reasons; a `source_runs` trigger makes it impossible to bypass |
 | PGlite for DB tests | Migrations, RLS and functions are tested in-process without Docker |
 | Scoring engine in TypeScript, prices in SQL | Effective price must be identical everywhere (SQL); scoring weights change often and need fast unit tests (TS) |
+| Effective price mirrored in TS, held to SQL by a parity test | Toggling a saved card must update prices instantly and offline; the parity test keeps the two engines identical |
 | Nothing scraped writes to live tables | All automated/community data goes through `staging_records` or `submissions` and human review |
 | Confidence decays in reads, not writes | `display_confidence()` drops one level after 30 days, so the stored value stays the reviewer's judgement |
 | Distance and "open now" computed on the phone | The user's location never reaches the server; filters that need the database go in the URL instead |
@@ -54,6 +55,7 @@ brewpick-lahore/
 │  │  ├─ domain/           types + Zod schemas shared by app, scripts and collectors
 │  │  ├─ scoring/          "Pick for me" engine
 │  │  ├─ compare/          compare query, URL selection, best-value rule, tray (localStorage)
+│  │  ├─ deals/            effective-price engine (TS mirror of SQL), live deals loader, saved cards store
 │  │  ├─ explore/          search + place detail queries, filters (URL), hours, travel estimate, location store
 │  │  ├─ pipeline/         normalizer, validator, matcher + diff engine, stager, publisher, CSV import
 │  │  └─ i18n/             message catalogues (en, ur) and RTL helpers

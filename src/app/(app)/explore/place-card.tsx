@@ -3,8 +3,9 @@ import { Star, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfidenceBadge, SampleBadge, Tone } from "@/components/app/badges";
 import { ComparePlaceToggle } from "@/components/app/compare-buttons";
+import { PriceAfterDeals } from "@/components/app/price-after-deals";
 import { formatDistance } from "@/lib/capture/geo";
-import { CHANNEL_LABELS, formatPkr } from "@/lib/explore/format";
+import { CHANNEL_LABELS } from "@/lib/explore/format";
 import { PLACE_TYPE_LABELS } from "@/lib/explore/filters";
 import { describeOpenStatus, type OpenStatus } from "@/lib/explore/hours";
 import type { DrinkPick, PlaceSummary } from "@/lib/explore/repo";
@@ -52,7 +53,18 @@ export function PlaceCard({ place, pick, distanceM, distanceFrom, open, classNam
       <dl className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-muted/60 p-2.5 text-center">
         <div className="min-w-0">
           <dt className="text-[11px] text-muted-foreground">Price</dt>
-          <dd className="text-base font-semibold tabular-nums">{pick ? formatPkr(pick.pricePkr) : "—"}</dd>
+          <dd className="text-base">
+            {pick ? (
+              <PriceAfterDeals
+                cup={{ pricePkr: pick.pricePkr, menuItemId: pick.menuItemId, placeId: place.id, brandId: place.brandId, channel: pick.channel }}
+                deals={place.deals}
+                withNote={false}
+                className="items-center"
+              />
+            ) : (
+              <span className="font-semibold">—</span>
+            )}
+          </dd>
           <dd className="truncate text-[11px] text-muted-foreground">
             {pick ? `${pick.name} · ${pick.size}${pick.channel !== "dine_in" ? ` · ${CHANNEL_LABELS[pick.channel]}` : ""}` : place.hasMenu ? "No match" : "No prices yet"}
           </dd>

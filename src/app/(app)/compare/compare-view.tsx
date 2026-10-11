@@ -9,6 +9,7 @@ import { nativeSelect } from "@/components/admin/native-select";
 import { cn } from "@/lib/utils";
 import { compareHref, MAX_COMPARE, type CompareSelection } from "@/lib/compare/params";
 import type { CompareResult } from "@/lib/compare/repo";
+import { CardsButton } from "@/components/app/cards-sheet";
 import { CompareTable } from "./compare-table";
 
 export function CompareView({
@@ -81,7 +82,11 @@ export function CompareView({
       ) : (
         <>
           {count === 1 && <p className="text-sm text-muted-foreground">Add at least one more to see what stands out.</p>}
-          <CompareTable columns={result.columns} removeHref={removeHref} />
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">Prices after deals use the cards and apps you have.</p>
+            <CardsButton compact />
+          </div>
+          <CompareTable columns={result.columns} deals={result.deals} removeHref={removeHref} />
           <p className="text-xs text-muted-foreground">
             ✓ marks the best value in a row. A dash means we don&apos;t know the value; it never counts as best.
             {selection.places.length > 0 && " For each place we compare the size closest to a regular cup (350 ml)."}

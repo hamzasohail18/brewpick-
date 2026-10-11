@@ -6,6 +6,8 @@ import { formatPkr } from "@/lib/explore/format";
 import type { HoursRow } from "@/lib/explore/hours";
 import type { PriceChannel } from "@/lib/explore/repo";
 import type { CompareSelection } from "./params";
+import type { DealRule } from "@/lib/deals/engine";
+import { loadDeals, toRule } from "@/lib/deals/repo";
 
 /** Size used to pick "the" latte at each place when comparing places: closest to a regular cup. */
 export const REFERENCE_ML = 350;
@@ -15,6 +17,7 @@ const DRINK_PREFERENCE = ["latte", "cappuccino", "americano", "flat-white", "ice
 
 export interface CompareDrink {
   sizeId: string;
+  menuItemId: string;
   name: string;
   drinkType: string | null;
   size: string;
@@ -41,6 +44,7 @@ export interface CompareDrink {
 
 export interface ComparePlace {
   id: string;
+  brandId: string | null;
   slug: string;
   name: string;
   branchName: string | null;
@@ -65,6 +69,8 @@ export interface CompareColumn {
 export interface CompareResult {
   drink: { slug: string; name: string } | null;
   columns: CompareColumn[];
+  /** Live deals at the compared places, so prices after deals follow the user's saved cards. */
+  deals: DealRule[];
 }
 
 export async function getComparison(db: Db, sel: CompareSelection, paymentMethodIds: number[] = []): Promise<CompareResult> {
@@ -99,7 +105,7 @@ export async function getComparison(db: Db, sel: CompareSelection, paymentMethod
   const placeIds = [...new Set(drinks.map((d) => d.place_id as string))];
   const places = placeIds.length || sel.places.length
     ? await db.query<Record<string, unknown>>(
-        `select p.id, p.slug, p.name, p.branch_name, a.name as area_name, p.lat::float8 as lat, p.lng::float8 as lng,
+        `select p.id, p.brand_id, p.slug, p.name, p.branch_name, a.name as area_name, p.lat::float8 as lat, p.lng::float8 as lng,
                 p.rating_avg::float8 as rating, coalesce(p.rating_count, 0) as rating_count, p.is_sample,
                 (select coalesce(json_agg(json_build_object('day_of_week', h.day_of_week, 'opens_at', left(h.opens_at::text, 5),
                           'closes_at', left(h.closes_at::text, 5), 'is_closed', h.is_closed) order by h.day_of_week), '[]'::json)
@@ -148,7 +154,8 @@ export async function getComparison(db: Db, sel: CompareSelection, paymentMethod
     const [row] = await db.query<{ slug: string; name: string }>("select slug, name from drink_types where slug = $1", [drinkSlug]);
     drink = row ?? null;
   }
-  return { drink, columns };
+  const deals = (await loadDeals(db, { placeIds: [...new Set(columns.map((c) => c.place.id))] })).map(toRule);
+  return { drink, columns, deals };
 }
 
 /** The drink served by most of these places (ties broken by DRINK_PREFERENCE, then name). */
@@ -168,6 +175,7 @@ export async function defaultDrink(db: Db, placeSlugs: string[]): Promise<string
 function toPlace(p: Record<string, unknown>): ComparePlace {
   return {
     id: p.id as string,
+    brandId: (p.brand_id as string) ?? null,
     slug: p.slug as string,
     name: p.name as string,
     branchName: (p.branch_name as string) ?? null,
@@ -186,6 +194,7 @@ function toDrink(d: Record<string, unknown>): CompareDrink {
   const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
   return {
     sizeId: d.item_size_id as string,
+    menuItemId: d.menu_item_id as string,
     name: d.display_name as string,
     drinkType: (d.drink_type_slug as string) ?? null,
     size: d.size_label as string,
