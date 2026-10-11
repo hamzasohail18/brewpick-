@@ -28,6 +28,7 @@ sources ─▶│ guard ─▶ fetch/OCR ─▶ normalize ─▶ validate │─
 | Scoring engine in TypeScript, prices in SQL | Effective price must be identical everywhere (SQL); scoring weights change often and need fast unit tests (TS) |
 | Nothing scraped writes to live tables | All automated/community data goes through `staging_records` or `submissions` and human review |
 | Confidence decays in reads, not writes | `display_confidence()` drops one level after 30 days, so the stored value stays the reviewer's judgement |
+| Distance and "open now" computed on the phone | The user's location never reaches the server; filters that need the database go in the URL instead |
 | Saved cards stored locally by default | Bank/app *names* only; synced to `user_payment_methods` only when signed in |
 
 ## Folder structure
@@ -52,6 +53,7 @@ brewpick-lahore/
 │  │  ├─ supabase/         browser / server / service-role clients
 │  │  ├─ domain/           types + Zod schemas shared by app, scripts and collectors
 │  │  ├─ scoring/          "Pick for me" engine
+│  │  ├─ explore/          search + place detail queries, filters (URL), hours, travel estimate, location store
 │  │  ├─ pipeline/         normalizer, validator, matcher + diff engine, stager, publisher, CSV import
 │  │  └─ i18n/             message catalogues (en, ur) and RTL helpers
 │  └─ ...

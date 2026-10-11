@@ -46,6 +46,8 @@ npm run typecheck
 | `APP_URL` | server | Public origin used in stored proof-photo links (e.g. `https://brewpick.pk`) |
 | `CAPTURE_MAX_DISTANCE_M` | server | How close to a place a Menu Capture must be made (default 200) |
 | `GOOGLE_PLACES_API_KEY`, `USDA_FDC_API_KEY` | collectors | Optional; only used once the source is reviewed |
+| `NEXT_PUBLIC_MAP_TILE_URL` | browser | Map tile template (default: OpenStreetMap's standard tiles, see the map note below) |
+| `NEXT_PUBLIC_MAP_ATTRIBUTION` | browser | Attribution HTML for that tile provider |
 
 Admins are users whose Supabase `app_metadata.role` is `admin` (set from the dashboard or with the service key).
 
@@ -148,6 +150,20 @@ production so stored proof links use the public domain.
 Phones only share their location with HTTPS sites. Over plain-HTTP Wi-Fi (http://<your-mac>:3000) the
 location check reports "missing" and captures are flagged; use a deployed HTTPS preview, or
 `next dev --experimental-https`, to test it on a real phone.
+
+## Explore and place pages
+
+`/explore` lists published places with every filter from the spec. Filters live in the URL, so a filtered list can be shared.
+
+- **Server side** (`src/lib/explore/repo.ts`, runs as `anon` so RLS applies): drink type, hot/iced, price/calorie/sugar limits, minimum caffeine, roast, milk alternative, allergens, dairy-free, place type, area, amenities and "has deals". Each card shows the cheapest matching drink, or the lowest-calorie one when sorting by calories.
+- **On the phone**: distance, travel time, "open now" and the distance limit. Your GPS position is never sent to the server or stored; only the *choice* (an area, or "use my location") is remembered in the browser.
+- **Missing data is never zero.** A calorie or sugar limit skips drinks without that data. An allergen filter skips drinks with no allergen or ingredient information, and "no dairy" means the drink as served has no milk.
+- **Opening hours** are evaluated in Lahore time (`Asia/Karachi`), including after-midnight closing; unlisted days count as closed (OSM convention).
+- **Travel time is an estimate**: straight-line distance × 1.35 for roads, walking at 4.5 km/h up to 1.2 km, otherwise driving at 18 km/h + 3 min. The assumptions sit in `src/lib/explore/travel.ts` and show on hover.
+
+`/places/[slug]` shows the menu per size with tax flag, calories, sugar and caffeine. Every price shows its confidence, last-checked date, source, source link and menu photo where there is one. Estimated nutrition shows how it was estimated. The page also lists milk options with price and calorie differences, allergens, ingredients, beans, today's active deals (with a badge when a deal ends within 48 hours), weekly hours and a map. Source names come from the `v_source_labels` view, so the public sees a source's name without the registry's review notes.
+
+**Map tiles:** the map uses Leaflet with OpenStreetMap's standard tile server by default. That's fine for development and light use, but the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/) doesn't allow heavy traffic. Before launch, set `NEXT_PUBLIC_MAP_TILE_URL` (and `NEXT_PUBLIC_MAP_ATTRIBUTION`) to a tile provider with a suitable plan, or self-host tiles.
 
 ## Sample data
 

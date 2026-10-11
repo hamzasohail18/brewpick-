@@ -126,3 +126,41 @@
     @apply bg-background text-foreground;
   }
 }
+/* Leave room for the fixed bottom navigation on public screens. */
+body:has([data-bottom-nav]) {
+  padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
+}
+
+/* Map price pins (Leaflet divIcon). */
+.bp-pin {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1.5px solid var(--primary);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font: 600 12px/1.4 var(--font-geist-sans), system-ui, sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  transform: translate(-50%, -50%);
+  width: max-content;
+}
+.bp-pin[data-active="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.bp-pin[data-closed="true"] {
+  opacity: 0.6;
+}
+.bp-you {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: oklch(0.6 0.17 250);
+  border: 3px solid white;
+  box-shadow: 0 0 0 6px oklch(0.6 0.17 250 / 0.25);
+  transform: translate(-50%, -50%);
+}
+.leaflet-container {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--muted);
+}
