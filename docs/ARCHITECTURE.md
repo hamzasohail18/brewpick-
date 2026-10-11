@@ -55,6 +55,7 @@ brewpick-lahore/
 │  │  ├─ domain/           types + Zod schemas shared by app, scripts and collectors
 │  │  ├─ profile/          own-rows repo (profile, favourites, account cards) + phone-side stores and account sync
 │  │  ├─ scoring/          "Pick for me": engine (filters, factors, weights, reasons), quiz state, candidates query
+│  │  ├─ community/        submissions -> staging, votes, reports, claims, owner confirm, moderation queries
 │  │  ├─ compare/          compare query, URL selection, best-value rule, tray (localStorage)
 │  │  ├─ deals/            effective-price engine (TS mirror of SQL), live deals loader, saved cards store
 │  │  ├─ explore/          search + place detail queries, filters (URL), hours, travel estimate, location store

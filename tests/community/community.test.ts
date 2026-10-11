@@ -45,6 +45,9 @@ describe("community submissions", () => {
     expect(staged.flags).toContain("community");
     expect((staged.messages as string[]).join(" ")).toContain("Note from the sender: New menu board");
     expect((staged.proposed as { confidence: string }).confidence).toBe("community_reported");
+    // The sender didn't say whether tax is included: the known value is kept, not erased.
+    expect((staged.proposed as { tax_inclusive: boolean | null }).tax_inclusive).toBe(true);
+    expect(staged.diff).not.toHaveProperty("tax_inclusive");
 
     await service((tx) => approveStaged(tx, ADMIN, staged.id as string).then(() => syncSubmissionForStaged(tx, staged.id as string)));
     expect((await latteRegular()).price_pkr).toBe(latte.price_pkr + 60);

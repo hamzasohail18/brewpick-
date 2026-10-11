@@ -161,6 +161,12 @@ async function buildRecords(
         [p.item_size_id, place.id],
       );
       if (!size) throw new SubmissionRejected("That drink isn't on this place's menu.");
+      // "Not sure" about tax keeps what we already know, rather than erasing it.
+      const [live] = await tx.query<{ tax_inclusive: boolean | null }>(
+        "select tax_inclusive from item_prices where item_size_id = $1 and channel = $2 and is_current",
+        [p.item_size_id, p.channel],
+      );
+      const taxInclusive = p.tax_inclusive ?? live?.tax_inclusive ?? null;
       return [
         {
           kind: "item_price",
@@ -169,7 +175,7 @@ async function buildRecords(
           size: { size_label: size.size_label, volume_ml: size.volume_ml, volume_is_assumed: size.volume_is_assumed },
           channel: p.channel,
           price_pkr: p.price_pkr,
-          tax_inclusive: p.tax_inclusive,
+          tax_inclusive: taxInclusive,
           ...provenance,
         },
       ];

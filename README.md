@@ -216,6 +216,15 @@ Signing in is optional (`/login`):
 
 Language: the setting is in place but Urdu is marked "coming soon". The message catalogue and RTL plumbing exist; the translation isn't done yet.
 
+### Community, moderation and owners
+
+- **Suggestions** (`/places/[slug]/suggest`, signed in): a price change, missing drink, new deal, opening hours, or free text. All but free text need a photo (metadata stripped). Structured suggestions become staged records in the **review queue** (source *Community submissions*, flag *community*) with the photo as evidence. The submission's status follows the review, and senders see it under Profile → My submissions. Free text goes to **Moderation**. If the sender says "not sure" about tax, the known value is kept. Limit: 20 suggestions, reports and claims per user per day.
+- **Deal votes**: "Worked / Didn't work" on every deal (one vote per user; tallies are public, individual votes private). Deals with at least 3 "didn't work" votes, and more of those than "worked", appear under Moderation → Disputed deals, where an admin can take them down (audited).
+- **Reports** (`/places/[slug]/report`): closed, wrong hours/location/price, deal not honoured, duplicate, other.
+- **Owner claims** (`/places/[slug]/claim`): verify by a call to the cafe's *listed* number, a business email on the cafe's domain, or a document photo. Documents are stored privately (`.data/private-uploads`, served only to admins at `/admin/files/...`). Approving sets `places.claimed_by`.
+- **Owner portal** (`/owner`): "Confirm my menu is up to date" re-confirms every current price as the owner; unchanged prices move up to **Verified** at once. Owner price changes, drinks, deals and hours go through review (source *Owner portal*, flag *owner update*) and publish as Verified.
+- **Confidence on re-confirmation**: a stronger source re-confirming unchanged data (an owner, or an in-store check) raises it to that level; it never lowers it.
+
 **Map tiles:** the map uses Leaflet with OpenStreetMap's standard tile server by default. That's fine for development and light use, but the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/) doesn't allow heavy traffic. Before launch, set `NEXT_PUBLIC_MAP_TILE_URL` (and `NEXT_PUBLIC_MAP_ATTRIBUTION`) to a tile provider with a suitable plan, or self-host tiles.
 
 ## Sample data
